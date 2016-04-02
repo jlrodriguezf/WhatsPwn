@@ -1,10 +1,12 @@
 #!/bin/bash
 #WhatsAppPwn by jlrodriguezf
+#Color matching
 NONE='\033[0m'
 BOLD='\033[1m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
+#Beginning of function definitions
 BACKDOORMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}USE BACKDOOR APK?${CYAN}${NONE}[Y|N]:"
 	read BACKDOOR
@@ -477,6 +479,7 @@ IFAUTOMODEONJB(){
 		esac
 	fi
 }
+#Main interface if -i option
 INTERFACE(){
 	cat bin/motd.txt
 	OUTPUTDIR
@@ -508,20 +511,27 @@ USAGE(){
 	cat bin/help.txt
 	cd ${HOME}
 }
+#End of function definitions
+#Enable cleanly exit with ctrl+c
 trap 'EXITCODE' SIGHUP SIGINT SIGTERM SIGQUIT
 clear
+#Define working dir
 if ls | grep 'whatspwn' > /dev/null; then
 	WDIR=$(pwd)
 else
 	WDIR=$(dirname $0)
 fi
+#Define if sshpass dependency exists, if not, install it
 if ! type sshpass > /dev/null; then
 	echo -e "${BOLD}${RED}SSHPASS NOT FOUND, ${NONE}INSTALLING IT ... ${GREEN}[OK]${NONE}"
 	apt-get install sshpass
 fi
+#Add main to bash aliases so be able to run it as 'whatspwn'
 grep -v 'whatspwn' ~/.bash_aliases > ~/.bash_aliases_tmp; mv ~/.bash_aliases_tmp ~/.bash_aliases
 echo "alias whatspwn='${WDIR}/whatspwn'" >> ${HOME}/.bash_aliases
+#Load config file
 cd ${WDIR} && . ./config
+#Argument Parser
 if [[ $# > 0 ]]; then
 	key="$1"
 	case "$key" in
