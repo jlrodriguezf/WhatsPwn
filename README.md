@@ -1,5 +1,5 @@
 # Description
-Linux tool used to extract sensitive data, inject backdoor, or drop remote shells on android devices.
+Linux tool used to extract sensitive data, inject backdoor or drop remote shells on android devices.
 
 There may be some bugs on devices running Android 6.* Marshmallow because of new Android security policies. And KEYPAD injection may not work depending on processing speed of device and version.
 
