@@ -52,5 +52,5 @@ Do not hesitate in contacting me if you have any question o suggestion. E-Mail: 
 	                                                    SPECIFIED IT WILL USE DEFAULT IN "config" FILE.
 	[-u | --upload]                              >>>   Uploads the backup to server and 
 	                                                    prompt for SSH password.
-# License
-See the [license](https://github.com/jlrodriguezf/WhatsPwn/blob/master/LICENSE) file.
+# License and Disclaimer
+See the [license](https://github.com/jlrodriguezf/WhatsPwn/blob/master/LICENSE) file or the [disclaimer](https://github.com/jlrodriguezf/WhatsPwn/blob/master/bin/DISCLAIMER) file.
