@@ -1,6 +1,13 @@
 # WhatsPwn
 Linux tool used to extract sensitive data, inject backdoor, or drop remote shells on android devices.
 
+There may be some bugs on devices running Android 6.* Marshmallow because of new Android security policies. And KEYPAD injection may not work depending on processing speed of device and version.
+
+This program has been tested on Android 5.0.2 Lollipop on an LG H818n. It had worked flawlessly on many other devices but I do not guarantee this program will work for you flawlessly.
+
+Do not hesitate in contacting me if you have any question o suggestion.
+	E-Mail: jlrodriguezfragoso@gmail.com
+
 USAGE: 		./whatspwn [ACTIONS] [GENERAL ARGUMENTS] [ARGUMENTS]
 
 ACTIONS:
