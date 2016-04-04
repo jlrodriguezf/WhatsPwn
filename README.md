@@ -8,10 +8,12 @@ This program has been tested on Android 5.0.2 Lollipop on an LG H818n. It had wo
 Do not hesitate in contacting me if you have any question o suggestion.
 	E-Mail: jlrodriguezfragoso@gmail.com
 	
+---
+	
 # Usage
 	./whatspwn [ACTIONS] [GENERAL ARGUMENTS] [ARGUMENTS]
 
-ACTIONS:
+##### ACTIONS
 
 	* MAY USE WITH ARGUMENTS
 
@@ -24,14 +26,14 @@ ACTIONS:
 	[6 | UPLOAD]                            >>>   Upload database to server. (configured in server file)
 	[i | -i | --interface | INTERFACE]      >>>   Initialize CLI interface.
 
-GENERAL ARGUMENTS:
+##### GENERAL ARGUMENTS
 
 	[-o | --output] + [PATH]                >>>   Specifies the path for extracted data.
 	                                               (Must end with /) IF NOT SPECIFIED IT WILL USE 
 	                                                DEFAULT IN "config" FILE.
 	[-h | --help]                           >>>   Displays this message.
 
-ARGUMENTS FOR [FULL]:
+##### ARGUMENTS FOR FULL
 
 	[-b | --use-backdoor | --backdoor]           >>>   Injects virus for future connections.
 	[-e | --black-hole | --use-black-hole]       >>>   Extracts sensitive data from device.
@@ -41,7 +43,7 @@ ARGUMENTS FOR [FULL]:
 	                                                    SPECIFIED IT WILL USE DEFAULT IN "config" FILE.
 	[-u | --upload]                              >>>   Uploads the backup to server and 
 	                                                    prompt for SSH password.
-ARGUMENTS FOR [EXTRACTION]:
+##### ARGUMENTS FOR EXTRACTION
 
 	[-v | --victim] + [NAME OF THE VICTIM]       >>>   Specifies the name of the victim.
 	[-d | --DCIM | --dcim] * ONLY IF EXTRACTION  >>>   Extracts DCIM photos.
