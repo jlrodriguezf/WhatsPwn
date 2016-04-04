@@ -521,6 +521,38 @@ IFAUTOMODEONJB(){
 }
 #Main interface if -i option
 INTERFACE(){
+	clear
+	while true; do
+		if grep "I accept" LicenseAgreement; do
+			break
+		else
+			clear
+			cat < EOF > LicenseAgreement
+				WhatsPwn  Copyright (C) 2016  José Luis Rodríguez Fragoso
+			        This program comes with ABSOLUTELY NO WARRANTY; for details type `w'.
+			        This is free software, and you are welcome to redistribute it
+			        under certain conditions; type `c' for details.
+			        EOF
+			cat LicenseAgreement
+			echo -e -n "/n${BOLD}Do you accept the rights? ${NONE}${BOLD}[Y/N/W/C]${NONE}"
+			read license
+		        case "$license" in
+		        	Y|y|yes|YES|Yes|yES|yeS|YEs|YeS) echo "I accept" >> LicenseAgreement && break ;;
+		        	N|n|NO|no|No|nO) echo "I do NOT accept" >> LicenseAgreement && exit ;;
+		        	W|w) cat < EOF > LicenseAgreement
+		        		THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+					APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+					HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
+					OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
+					THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+					PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
+					IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
+					ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+					EOF
+					cat LicenseAgreement && read -p "$*" ;;
+				C|c) cat LICENSE && read -p "$*";;
+		fi
+	done
 	cat bin/motd.txt
 	OUTPUTDIR
 	echo -e "${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
