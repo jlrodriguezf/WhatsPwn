@@ -7,7 +7,7 @@ This program has been tested on Android 5.0.2 Lollipop on an LG H818n. It works 
 
 Do not hesitate in contacting me if you have any question o suggestion. E-Mail: jlrodriguezfragoso@gmail.com
 
-###### This tool is for educational and android developing purposes only. This was made to test and expose android security flaws.
+###### This tool is for educational and android developing purposes only. This was made to test and expose Android and WhatsApp security flaws.
 	
 ---
 	
@@ -52,4 +52,5 @@ Do not hesitate in contacting me if you have any question o suggestion. E-Mail: 
 	                                                    SPECIFIED IT WILL USE DEFAULT IN "config" FILE.
 	[-u | --upload]                              >>>   Uploads the backup to server and 
 	                                                    prompt for SSH password.
-
+# License
+See the [license](https://github.com/jlrodriguezf/WhatsPwn/blob/master/LICENSE) file.
