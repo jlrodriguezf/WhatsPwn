@@ -6,6 +6,7 @@ There may be some bugs on devices running Android 6.* Marshmallow because of new
 This program has been tested on Android 5.0.2 Lollipop on an LG H818n. It works flawlessly on many other devices but I do not guarantee this program will work for you flawlessly.
 
 Do not hesitate in contacting me if you have any question o suggestion. E-Mail: jlrodriguezfragoso@gmail.com
+###### This tool is currently being modified, expect updates soon.
 
 ###### This tool is for educational and android developing purposes only. This was made to test and expose Android and WhatsApp security flaws.
 	
