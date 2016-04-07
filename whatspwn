@@ -560,54 +560,54 @@ fi
 # CREATE TEMPORARY DIRECTORY
 mkdir -p ${WDIR}/tmp/
 
+# DEACTIVATED FOR DEBUGGING PURPOSES
 # ATTEMPT CONNECTION TO DEVICE IN BACKGROUND
-while true; do
-	# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
-	if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
-			echo -e "${BOLD}CONNECT THE DEVICE${NONE}"
-			${WDIR}/bin/adb start-server > /dev/null
-			${WDIR}/bin/adb wait-for-device > /dev/null
-	fi
-	# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
-	${WDIR}/bin/adb devices > ${WDIR}/tmp/ADB_Devices
-	# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE	
-	IP=$(grep -oE "[0-9]{1,3}(\.[0-9]{1,3}){3}" ${WDIR}/tmp/ADB_Devices)
-	# IF IP VARIABLE IS SET THEN IT IS CONNECTED WIRELESSLY
-	if [[ -n "$IP" ]]; then
-		CONNECTED=1
-		STATUS="${GREEN}CONNECTED${NONE} IP = [${CYAN}${IP}${NONE} IF YOU HAVE YOUR DEVICE CONNECTED TO CABLE, DISCONNECT IT.]"
-		# REMOVE ADB _Devices FILE TO AVOID ENTERING ABOVE IF STATEMENT
-		rm -f ${WDIR}/tmp/ADB_Devices
-		# BREAK THE CYLCE
-		break
-	else
-		# IF IP IS NOT SET, CHECK IF DEVICES IS CONNECTED LOCALLY ONLY
-		if [ `grep -oE "device" ${WDIR}/tmp/ADB_Devices` ]; then
-			# GET DEVICE IP WHILE ITS STILL CONNECTED
-			DEVICE_IP=$(${WDIR}/bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)
-			# ATTEMPT TO CONNECT WIRELESSLY
-			${WDIR}/bin/adb tcpip 5555
-			# ATTEMPT WIRELESS CONNECTION IF NOT CONNECTED
-			if [ ! `${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE` ]; then
-				# IF NOT CHECK IF IT IS STILL CONNECTED TO USB
-				if [ `${WDIR}/bin/adb devices | grep "device" -oE` ]; then
-					# IF IT IS, DISPLAY CONNECTED LOCALLY
-					CONNECTED=1
-					STATUS="${GREEN}CONNECTED ${CYAN}LOCALLY"
-					# REMOVE ADB DEVICES FILE
-					rm -f ${WDIR}/tmp/ADB_Devices
-					# BREAK THE CYCLE
-					break
-				else
-					# IF IT IS NOT CONNECTED TO USB SET DISCONNECTED, REMOVE ADB FILE AND CLEAR VARIABLE BUT DO NOT BREAK CYCLE TO KEEP ATTEMPTING CONNECTING
-					unset CONNECTED
-					STATUS="${RED}DISCONNECTED${NONE}"
-					rm -f ${WDIR}/tmp/ADB_Devices
-				fi
-			fi
-		fi
-	fi
-done
+#while true; do
+#	# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
+#	if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
+#			echo -e "${BOLD}CONNECT THE DEVICE${NONE}"
+#			${WDIR}/bin/adb wait-for-device > /dev/null
+#	fi
+#	# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
+#	${WDIR}/bin/adb devices > ${WDIR}/tmp/ADB_Devices
+#	# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE	
+#	IP=$(grep -oE "[0-9]{1,3}(\.[0-9]{1,3}){3}" ${WDIR}/tmp/ADB_Devices)
+#	# IF IP VARIABLE IS SET THEN IT IS CONNECTED WIRELESSLY
+#	if [[ -n "$IP" ]]; then
+#		CONNECTED=1
+#		STATUS="${GREEN}CONNECTED${NONE} IP = [${CYAN}${IP}${NONE} IF YOU HAVE YOUR DEVICE CONNECTED TO CABLE, DISCONNECT IT.]"
+#		# REMOVE ADB _Devices FILE TO AVOID ENTERING ABOVE IF STATEMENT
+#		rm -f ${WDIR}/tmp/ADB_Devices
+#		# BREAK THE CYLCE
+#		break
+#	else
+#		# IF IP IS NOT SET, CHECK IF DEVICES IS CONNECTED LOCALLY ONLY
+#		if [ `grep -oE "device" ${WDIR}/tmp/ADB_Devices` ]; then
+#			# GET DEVICE IP WHILE ITS STILL CONNECTED
+#			DEVICE_IP=$(${WDIR}/bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)
+#			# ATTEMPT TO CONNECT WIRELESSLY
+#			${WDIR}/bin/adb tcpip 5555
+#			# ATTEMPT WIRELESS CONNECTION IF NOT CONNECTED
+#			if [ ! `${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE` ]; then
+#				# IF NOT CHECK IF IT IS STILL CONNECTED TO USB
+#				if [ `${WDIR}/bin/adb devices | grep "device" -oE` ]; then
+#					# IF IT IS, DISPLAY CONNECTED LOCALLY
+#					CONNECTED=1
+#					STATUS="${GREEN}CONNECTED ${CYAN}LOCALLY"
+#					# REMOVE ADB DEVICES FILE
+#					rm -f ${WDIR}/tmp/ADB_Devices
+#					# BREAK THE CYCLE
+#					break
+#				else
+#					# IF IT IS NOT CONNECTED TO USB SET DISCONNECTED, REMOVE ADB FILE AND CLEAR VARIABLE BUT DO NOT BREAK CYCLE TO KEEP ATTEMPTING CONNECTING
+#					unset CONNECTED
+#					STATUS="${RED}DISCONNECTED${NONE}"
+#					rm -f ${WDIR}/tmp/ADB_Devices
+#				fi
+#			fi
+#		fi
+#	fi
+#done
 #######################################################################################################################
 #                                                  ARGUMENT PARSER                                                    #
 #######################################################################################################################
