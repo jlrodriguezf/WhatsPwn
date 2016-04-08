@@ -18,17 +18,23 @@
 #   José Luis Rodríguez Fragoso                                              #
 #   jlrodriguezfragoso@gmail.com                                             #
 ##############################################################################
-
+#                              PAYLOAD OPTIONS                               #
+##############################################################################
+# DEFAULT PAYLOAD TO USE, YOU CAN SPECIFY YOUR OWN IF YOU WANT. MUST END WITH .APK
+PAYLOAD=""
+# DEFAULT PAYLOAD NAME FOR OUTPUT. WITHOUT .APK
+PAYLOAD_NAME=""
+# DEFALT PAYLOAD PORT
+PAYLOAD_PORT=""
+# DEFAULT PAYLOAD IP
+PAYLOAD_IP=""
+# DEFAULT LEGITIMATE APK WITH FULL PATH. ENDING WITH .APK
+LEGITIMATE_APK=""
+##############################################################################
+#                                MAIN OPTIONS                                #
+##############################################################################
 # DEFAULT PATH FOR EXTRACTION
 PATHEXT="~/"
-# PAYLOAD TO USE, YOU CAN SPECIFY YOUR OWN IF YOU WANT. MUST END WITH .APK
-PAYLOAD=""
-# DEFAULT PAYLOAD NAME FOR OUTPUT
-PAYLOAD_NAME="Payload"
-# PAYLOAD PORT
-PAYLOAD_PORT="55555"
-# LEGITIMATE APK WITH FULL PATH
-LEGITIMATE_APK=""
 # DEFAULT FILENAME FOR BAK (IT WILL BE IN YOUR HOME DIRECTORY)
 BACKUPZIPNAME="filesystem_linux"
 # RUN BACKDOOR APK
