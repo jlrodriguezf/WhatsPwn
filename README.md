@@ -26,5 +26,13 @@ Do not hesitate in contacting me if you have any question o suggestion. E-Mail: 
 ###### Removed
 - Command line arguments
 
+# Requirements
+- Metasploit-Framework
+- SSH & SSHPASS
+- Ruby
+- Apktool
+	- Display manager running
+- Java 7
+
 # License and Disclaimer
 See the [license](https://github.com/jlrodriguezf/WhatsPwn/blob/master/LICENSE) file or the [disclaimer](https://github.com/jlrodriguezf/WhatsPwn/blob/master/bin/DISCLAIMER) file.
