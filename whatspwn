@@ -681,9 +681,14 @@ fi
 if [ ! `which msfvenom` ]; then
 	if [ ! `uname -a | grep "kali"` ]; then
 		apt-get install metasploit-framework -y
+		echo -e "${BOLD}${RED}RUBY WAS NOT FOUND, ${NONE}INSTALLING IT ... ${GREEN}[OK]${NONE}"
 	else
 		echo -e "${RED}METASPLOIT FRAMEWORK NOT INSTALLED AND YOUR LINUX DISTRO IS NOT KALI, INSTALL IT IF WANT TO USE THE PAYLOAD GENERATOR FEATURES.${NONE}"
 	fi
+fi
+
+if [ ! `which ruby` ]; then
+	apt-get install ruby -y
 fi
 
 # SSHPASS
